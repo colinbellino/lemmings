@@ -1,0 +1,32 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "build windows:debug",
+            "type": "shell",
+            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Windows/$date_time; godot --no-window --export-debug \"Windows Desktop\" ./Builds/Windows/$date_time/Tactics.exe && ./Builds/Windows/$date_time/Tactics.exe",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        // {
+        //     "label": "build windows:debug",
+        //     "type": "shell",
+        //     "command": "godot --no-window --export-debug \"Windows Desktop\" ./Builds/Windows/Tactics.exe && ./Builds/Windows/Tactics.exe",
+        //     "problemMatcher": [],
+        //     "group": {
+        //         "kind": "build",
+        //         "isDefault": true
+        //     }
+        // },
+        {
+            "label": "build windows:release",
+            "type": "shell",
+            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Windows/$date_time; godot --no-window --export \"Windows Desktop\" ./Builds/Windows/$date_time/Tactics.exe && ./Builds/Windows/$date_time/Tactics.exe",
+        }
+    ]
+}
