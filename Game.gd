@@ -2,6 +2,7 @@ extends Node2D
 
 onready var map_sprite : Sprite = get_node("%Map")
 onready var collision_sprite : Sprite = get_node("%Collision")
+onready var debug_label : Label = get_node("%Debug")
 
 var map_data : PoolIntArray = []
 
@@ -20,7 +21,7 @@ func _ready():
     map_image.lock()
     for y in range(0, size.y):
         for x in range(0, size.x):
-            var index := calculate_index(x, y, size.x)
+            var index := calculate_index(x, y, size.x as int) 
             var color := map_image.get_pixel(x, y)
             var value := 1
             if color.a == 0:
@@ -31,13 +32,15 @@ func _ready():
     map_sprite.texture = map_texture
 
     collision_image = Image.new()
-    collision_image.create(size.x, size.y, false, map_image.get_format())
+    collision_image.create(size.x as int, size.y as int, false, map_image.get_format())
     collision_texture = ImageTexture.new()
     collision_sprite.texture = collision_texture
 
     update_collision()
 
 func _process(_delta):
+    debug_label.set_text("FPS: %s" % Performance.get_monitor(Performance.TIME_FPS))
+
     if Input.is_action_just_released("debug_1"):
         collision_sprite.visible = !collision_sprite.visible
 
@@ -62,20 +65,21 @@ func update_collision() -> void :
     collision_image.lock()
     for index in range(0, map_data.size()):
         var pixel := map_data[index]
-        var position := calculate_position(index, size.x)
+        var x := index % size.x as int
+        var y := index / size.x as int
         var color := Color.transparent
         if pixel > 0:
             color = Color.red
             color.a = 0.5
-        collision_image.set_pixel(position.x, position.y, color)
+        collision_image.set_pixel(x, y, color)
     collision_image.unlock()
 
     collision_texture.create_from_image(collision_image, 0)
     
     var end := OS.get_ticks_usec()
-    var time := (end - start) / 1000000.0
+    var time := (end - start) / 1000.0
 
-    print("collision_update: %s" % [time])
+    print("collision_update: %sms" % [time])
 
 static func calculate_index(x: int, y: int, width: int) -> int:
     return y * width + x
