@@ -154,6 +154,14 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
                 var unit := spawn_unit(x, y)
                 print("%s spawned" % unit.name)
         TOOL_JOB_DIG:
+            var unit_index := get_unit_at(x, y)
+            if unit_index > -1:
+                var unit : Unit = units[unit_index]
+                if unit.job_id == Unit.JOB_DIG:
+                    unit.job_id = Unit.JOB_NONE
+                else: 
+                    unit.job_id = Unit.JOB_DIG
+                unit.job_started_at = OS.get_ticks_msec()
             print("TODO: Dig!")
 
 func select_tool(tool_id: int) -> void: 
@@ -181,30 +189,33 @@ func tick() -> void:
         var is_grounded := is_solid(ground_check_pos_x, ground_check_pos_y)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
         if is_grounded:
-            var wall_check_pos_x : int = unit.position.x + unit.direction
-            var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
-            var destination_offset_y := 0
-            var hit_wall := false
-
-            for offset_y in range(0, -3, -1):
-                var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
-                debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
-                hit_wall = is_solid(wall_check_pos_x, wall_check_pos_y_with_offset)
-
-                if not hit_wall:
-                    destination_offset_y = offset_y
-                    break
-
-            if hit_wall:
-                # Turn around
-                unit.direction *= -1
-                unit.flip_h = unit.direction == -1
+            if unit.job_id == Unit.JOB_DIG:
+                unit.play("dig")
             else:
-                # Walk forward
-                destination.y += destination_offset_y
-                destination.x += unit.direction
+                var wall_check_pos_x : int = unit.position.x + unit.direction
+                var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
+                var destination_offset_y := 0
+                var hit_wall := false
+                
+                for offset_y in range(0, -3, -1):
+                    var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
+                    debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
+                    hit_wall = is_solid(wall_check_pos_x, wall_check_pos_y_with_offset)
 
-            unit.play("walk")
+                    if not hit_wall:
+                        destination_offset_y = offset_y
+                        break
+
+                if hit_wall:
+                    # Turn around
+                    unit.direction *= -1
+                    unit.flip_h = unit.direction == -1
+                else:
+                    # Walk forward
+                    destination.y += destination_offset_y
+                    destination.x += unit.direction
+
+                unit.play("walk")
         else:
             # Fall down
             unit.play("fall")
