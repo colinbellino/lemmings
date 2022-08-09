@@ -1,13 +1,15 @@
 extends Node2D
 class_name Game
 
-const SCALE : int = 5
-const BACKGROUND_COLOR : Color = Color(0, 0.1, 0.2, 1)
+const SCALE : int = 6
+const BACKGROUND_COLOR : Color = Color.transparent
 const TICK_SPEED_IN_MILLISECONDS : int = 50
-
 const PIXEL_EMPTY : int = 0
-const PIXEL_BLOCK : int = 1
+const PIXEL_SOLID : int = 1
 const UNITS_MAX : int = 100
+const TOOL_DESTROY_RECT : int = 0
+const TOOL_SPAWN_UNIT : int = 1
+const TOOL_JOB_DIG : int = 2
 
 onready var scaler_node : Node2D = get_node("%Scaler")
 onready var map_sprite : Sprite = get_node("%Map")
@@ -15,14 +17,23 @@ onready var collision_sprite : Sprite = get_node("%Collision")
 onready var debug_label : Label = get_node("%DebugLabel")
 onready var debug_draw := get_node("%DebugCanvas")
 
-var map_data : PoolIntArray = []
+onready var action0_button := get_node("%Action0")
+onready var action1_button := get_node("%Action1")
+onready var action2_button := get_node("%Action2")
+
+export var map_original_texture : Texture
+export var unit_prefab : PackedScene
+
+var next_tick : float
+var tool_primary : int = TOOL_DESTROY_RECT
+var tool_secondary : int = TOOL_SPAWN_UNIT
 var units : Array = []
 var units_count : int
-var spawn_position : Vector2 = Vector2()
-var next_tick : float
-var original_texture : Texture
+var map_data : PoolIntArray = []
 var map_texture : Texture
 var map_image : Image
+var map_width : int
+var map_height : int
 var collision_texture : Texture
 var collision_image : Image
 
@@ -30,8 +41,9 @@ func _ready() -> void :
     units.resize(UNITS_MAX)
     scaler_node.scale = Vector2(SCALE, SCALE)
 
-    original_texture = ResourceLoader.load("res://map_00.png")
-    map_image = original_texture.get_data()
+    map_image = map_original_texture.get_data()
+    map_width = map_image.get_width()
+    map_height = map_image.get_height()
 
     var width := map_image.get_width()
     var height := map_image.get_height()
@@ -44,7 +56,7 @@ func _ready() -> void :
             var color := map_image.get_pixel(x, y)
             var value := PIXEL_EMPTY
             if color.a > 0:
-                value = PIXEL_BLOCK
+                value = PIXEL_SOLID
             map_data.set(index, value)
     map_image.unlock()
 
@@ -58,11 +70,15 @@ func _ready() -> void :
 
     update_map(0, 0, map_image.get_width(), map_image.get_height())
 
+    toggle_debug()
+
+    action0_button.connect("pressed", self, "action_pressed", [TOOL_DESTROY_RECT])
+    action1_button.connect("pressed", self, "action_pressed", [TOOL_SPAWN_UNIT])
+    action2_button.connect("pressed", self, "action_pressed", [TOOL_JOB_DIG])
+
 func _process(_delta) -> void :
     if Input.is_action_just_released("debug_1"):
-        print("Toggle debug")
-        collision_sprite.visible = !collision_sprite.visible
-        debug_draw.visible = !debug_draw.visible
+        toggle_debug()
         
     if Input.is_action_just_released("debug_2"):
         print("Toggle map")
@@ -89,44 +105,55 @@ func _unhandled_input(event) -> void :
         if event.button_index == BUTTON_LEFT:
             if not event.pressed:
                 var map_position = pointer_to_map_position(event.position)
-                destroy_rect(map_position.x, map_position.y, 26, 26)
+                use_tool(tool_primary, map_position.x, map_position.y)
         if event.button_index == BUTTON_RIGHT:
             if not event.pressed:
                 var map_position = pointer_to_map_position(event.position)
-                var unit := spawn_unit(map_position.x, map_position.y)
+                use_tool(tool_secondary, map_position.x, map_position.y)
+
+func use_tool(tool_id: int, x: int, y: int) -> void : 
+    match tool_id:
+        TOOL_DESTROY_RECT:
+            destroy_rect(x, y, 26, 26)
+        TOOL_SPAWN_UNIT:
+            if is_in_bounds(x, y) && not is_solid(x, y):
+                var unit := spawn_unit(x, y)
                 print("%s spawned" % unit.name)
+        TOOL_JOB_DIG:
+            print("TODO: Dig!")
+
+func action_pressed(tool_id: int) -> void : 
+    tool_primary = tool_id
+
+func toggle_debug() -> void : 
+    print("Toggle debug")
+    collision_sprite.visible = !collision_sprite.visible
+    debug_draw.visible = !debug_draw.visible
 
 func tick() -> void : 
-    var map_width := map_image.get_width()
-    var map_height := map_image.get_height()
-
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
 
         var destination := unit.position
-        var unit_width := unit.texture.get_width()
-        var unit_height := unit.texture.get_height()
         var ground_check_pos_x := unit.position.x
-        var ground_check_pos_y := unit.position.y + unit_height / 2
+        var ground_check_pos_y := unit.position.y + unit.height / 2
 
-        if not is_in_bounds(ground_check_pos_x, ground_check_pos_y, map_width, map_height):
+        if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             print("%s: OOB" % unit.name)
             continue
             
-        var ground_check_index := calculate_index(ground_check_pos_x, ground_check_pos_y, map_width)
-        var is_grounded := map_data[ground_check_index] == PIXEL_BLOCK
+        var is_grounded := is_solid(ground_check_pos_x, ground_check_pos_y)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
         if is_grounded:
             var wall_check_pos_x : int = unit.position.x + unit.direction
-            var wall_check_pos_y : int = unit.position.y + (unit_height / 2) - 1
+            var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
             var destination_offset_y := 0
             var hit_wall := false
 
             for offset_y in range(0, -3, -1):
                 var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
-                var wall_check_index := calculate_index(wall_check_pos_x, wall_check_pos_y_with_offset, map_width)
                 debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
-                hit_wall = map_data[wall_check_index] == PIXEL_BLOCK
+                hit_wall = is_solid(wall_check_pos_x, wall_check_pos_y_with_offset)
 
                 if not hit_wall:
                     destination_offset_y = offset_y
@@ -140,8 +167,11 @@ func tick() -> void :
                 # Walk forward
                 destination.y += destination_offset_y
                 destination.x += unit.direction
+
+            unit.play("walk")
         else:
             # Fall down
+            unit.play("fall")
             destination.y += 1
         
         unit.position = destination
@@ -150,11 +180,10 @@ func pointer_to_map_position(pos: Vector2) -> Vector2 :
     return pos / SCALE
 
 func spawn_unit(x: int, y: int) -> Unit : 
-    var unit := Unit.new()
+    var unit : Unit = unit_prefab.instance()
     unit.name = "Unit %s" % units_count
-    unit.texture = ResourceLoader.load("res://unit.png")
     unit.position.x = x
-    unit.position.y = y
+    unit.position.y = y - unit.height / 2
 
     units[units_count] = unit
     scaler_node.add_child(unit)
@@ -165,14 +194,12 @@ func spawn_unit(x: int, y: int) -> Unit :
 
 func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void :
     var pixels_to_delete : PoolIntArray = []
-    var map_width := map_image.get_width()
-    var map_height := map_image.get_height()
 
     for offset_x in range(-width / 2, width / 2):
         for offset_y in range(-height / 2, height / 2):
             var pos_x = origin_x + offset_x
             var pos_y = origin_y + offset_y
-            if is_in_bounds(pos_x, pos_y, map_width, map_height):
+            if is_in_bounds(pos_x, pos_y):
                 var index := calculate_index(pos_x, pos_y, map_width)
                 pixels_to_delete.append(index)
 
@@ -184,8 +211,14 @@ func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void
 
     update_map(origin_x - width / 2, origin_y - height / 2, width, height)
 
-func is_in_bounds(x: int, y: int, width: int, height: int) -> bool :
-    return x > 0 && x < width && y > 0 && y < height
+func is_solid(x: int, y: int) -> bool : 
+    if not is_in_bounds(x, y):
+        return false
+    var index := calculate_index(x, y, map_width)
+    return map_data[index] == PIXEL_SOLID
+
+func is_in_bounds(x: int, y: int) -> bool :
+    return x > 0 && x < map_width && y > 0 && y < map_height
 
 func quit_game() -> void :
     print("Quitting game...")

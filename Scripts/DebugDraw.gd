@@ -6,7 +6,7 @@ var _rects_count : int = 0
 var _updated : bool
 
 func _ready() -> void :
-    _rects.resize(100)
+    _rects.resize(300)
 
 func _process(_delta) -> void :
     if _updated:
@@ -25,7 +25,7 @@ func _draw() -> void :
 
 func add_rect(rect: Rect2, color: Color) -> void : 
     if _rects_count >= _rects.size():
-        printerr("Maxium rects drawn (%s)" % _rects.size())
+        # printerr("Maxium rects drawn (%s)" % _rects.size())
         return
 
     # print("add_rect: ", rect, color)

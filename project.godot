@@ -9,20 +9,20 @@
 config_version=4
 
 _global_script_classes=[ {
-"base": "Control",
+"base": "Reference",
 "class": "DebugDraw",
 "language": "GDScript",
-"path": "res://DebugDraw.gd"
+"path": "res://Scripts/DebugDraw.gd"
 }, {
 "base": "Node2D",
 "class": "Game",
 "language": "GDScript",
-"path": "res://Game.gd"
+"path": "res://Scripts/Game.gd"
 }, {
-"base": "Sprite",
+"base": "AnimatedSprite",
 "class": "Unit",
 "language": "GDScript",
-"path": "res://Unit.gd"
+"path": "res://Scripts/Unit.gd"
 } ]
 _global_script_class_icons={
 "DebugDraw": "",
@@ -33,13 +33,12 @@ _global_script_class_icons={
 [application]
 
 config/name="Lemmings"
-run/main_scene="res://Main.tscn"
+run/main_scene="res://Scenes/Main.tscn"
 boot_splash/show_image=false
 boot_splash/image="res://splash.png"
 boot_splash/fullsize=false
 boot_splash/use_filter=false
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
-config/icon="res://icon.png"
 
 [aseprite]
 
@@ -69,6 +68,7 @@ import/preset={
 
 window/size/width=1920
 window/size/height=1080
+window/size/resizable=false
 window/dpi/allow_hidpi=true
 window/vsync/use_vsync=false
 window/stretch/mode="viewport"
@@ -128,5 +128,5 @@ common/enable_pause_aware_picking=true
 
 [rendering]
 
-environment/default_clear_color=Color( 0.0862745, 0.0862745, 0.0862745, 1 )
+environment/default_clear_color=Color( 0.0431373, 0.0431373, 0.0431373, 1 )
 environment/default_environment="res://default_env.tres"
