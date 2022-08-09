@@ -16,16 +16,17 @@ onready var map_sprite : Sprite = get_node("%Map")
 onready var collision_sprite : Sprite = get_node("%Collision")
 onready var debug_label : Label = get_node("%DebugLabel")
 onready var debug_draw := get_node("%DebugCanvas")
-
 onready var action0_button := get_node("%Action0")
 onready var action1_button := get_node("%Action1")
 onready var action2_button := get_node("%Action2")
 
 export var map_original_texture : Texture
+export var cursor_default : Texture
+export var cursor_border : Texture
 export var unit_prefab : PackedScene
 
 var next_tick : float
-var tool_primary : int = TOOL_DESTROY_RECT
+var tool_primary : int = TOOL_JOB_DIG
 var tool_secondary : int = TOOL_SPAWN_UNIT
 var units : Array = []
 var units_count : int
@@ -37,7 +38,7 @@ var map_height : int
 var collision_texture : Texture
 var collision_image : Image
 
-func _ready() -> void :
+func _ready() -> void:
     units.resize(UNITS_MAX)
     scaler_node.scale = Vector2(SCALE, SCALE)
 
@@ -72,11 +73,13 @@ func _ready() -> void :
 
     toggle_debug()
 
-    action0_button.connect("pressed", self, "action_pressed", [TOOL_DESTROY_RECT])
-    action1_button.connect("pressed", self, "action_pressed", [TOOL_SPAWN_UNIT])
-    action2_button.connect("pressed", self, "action_pressed", [TOOL_JOB_DIG])
+    set_cursor(cursor_default)
 
-func _process(_delta) -> void :
+    action0_button.connect("pressed", self, "select_tool", [TOOL_DESTROY_RECT])
+    action1_button.connect("pressed", self, "select_tool", [TOOL_SPAWN_UNIT])
+    action2_button.connect("pressed", self, "select_tool", [TOOL_JOB_DIG])
+
+func _process(_delta) -> void:
     if Input.is_action_just_released("debug_1"):
         toggle_debug()
         
@@ -93,6 +96,14 @@ func _process(_delta) -> void :
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
+    var mouse_position := get_viewport().get_mouse_position()
+    var mouse_map_position := viewport_to_map_position(mouse_position)
+    var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
+    if unit_index > -1:
+        set_cursor(cursor_border)
+    else:
+        set_cursor(cursor_default)
+
     debug_label.set_text("FPS: %s" % Performance.get_monitor(Performance.TIME_FPS))
 
     var now := OS.get_ticks_msec()
@@ -100,39 +111,64 @@ func _process(_delta) -> void :
         tick()
         next_tick = now + TICK_SPEED_IN_MILLISECONDS
 
-func _unhandled_input(event) -> void :
-    if event is InputEventMouseButton:
+func _unhandled_input(event) -> void:
+    if event is InputEventMouseMotion:
+        pass
+    elif event is InputEventMouseButton:
         if event.button_index == BUTTON_LEFT:
             if not event.pressed:
-                var map_position = pointer_to_map_position(event.position)
+                var map_position = viewport_to_map_position(event.position)
                 use_tool(tool_primary, map_position.x, map_position.y)
         if event.button_index == BUTTON_RIGHT:
             if not event.pressed:
-                var map_position = pointer_to_map_position(event.position)
+                var map_position = viewport_to_map_position(event.position)
                 use_tool(tool_secondary, map_position.x, map_position.y)
 
-func use_tool(tool_id: int, x: int, y: int) -> void : 
+func get_unit_at(x: int, y: int) -> int:
+    if not is_in_bounds(x, y):
+        return -1
+
+    for unit_index in range(0, units_count):
+        var unit = units[unit_index]
+        if is_point_inside(Vector2(x, y), unit.get_bounds()):
+            return unit_index
+
+    return -1
+
+func is_point_inside(point: Vector2, rect: Rect2) -> bool:
+    return (point.x >= rect.position.x && point.x <= rect.position.x + rect.size.x) \
+        && (point.y >= rect.position.y && point.y <= rect.position.y + rect.size.y)
+
+func set_cursor(cursor: Texture) -> void:
+    Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
+
+func use_tool(tool_id: int, x: int, y: int) -> void: 
+    if not is_in_bounds(x, y):
+        return
+
     match tool_id:
         TOOL_DESTROY_RECT:
             destroy_rect(x, y, 26, 26)
         TOOL_SPAWN_UNIT:
-            if is_in_bounds(x, y) && not is_solid(x, y):
+            if not is_solid(x, y):
                 var unit := spawn_unit(x, y)
                 print("%s spawned" % unit.name)
         TOOL_JOB_DIG:
             print("TODO: Dig!")
 
-func action_pressed(tool_id: int) -> void : 
+func select_tool(tool_id: int) -> void: 
     tool_primary = tool_id
 
-func toggle_debug() -> void : 
+func toggle_debug() -> void: 
     print("Toggle debug")
     collision_sprite.visible = !collision_sprite.visible
     debug_draw.visible = !debug_draw.visible
 
-func tick() -> void : 
+func tick() -> void: 
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
+
+        debug_draw.add_rect(unit.get_bounds(), Color.green)
 
         var destination := unit.position
         var ground_check_pos_x := unit.position.x
@@ -176,10 +212,10 @@ func tick() -> void :
         
         unit.position = destination
 
-func pointer_to_map_position(pos: Vector2) -> Vector2 :
+func viewport_to_map_position(pos: Vector2) -> Vector2:
     return pos / SCALE
 
-func spawn_unit(x: int, y: int) -> Unit : 
+func spawn_unit(x: int, y: int) -> Unit: 
     var unit : Unit = unit_prefab.instance()
     unit.name = "Unit %s" % units_count
     unit.position.x = x
@@ -192,7 +228,7 @@ func spawn_unit(x: int, y: int) -> Unit :
 
     return unit
 
-func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void :
+func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void:
     var pixels_to_delete : PoolIntArray = []
 
     for offset_x in range(-width / 2, width / 2):
@@ -211,20 +247,20 @@ func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void
 
     update_map(origin_x - width / 2, origin_y - height / 2, width, height)
 
-func is_solid(x: int, y: int) -> bool : 
+func is_solid(x: int, y: int) -> bool: 
     if not is_in_bounds(x, y):
         return false
     var index := calculate_index(x, y, map_width)
     return map_data[index] == PIXEL_SOLID
 
-func is_in_bounds(x: int, y: int) -> bool :
+func is_in_bounds(x: int, y: int) -> bool:
     return x > 0 && x < map_width && y > 0 && y < map_height
 
-func quit_game() -> void :
+func quit_game() -> void:
     print("Quitting game...")
     get_tree().quit()
 
-func update_map(x: int, y: int, width: int, height: int) -> void :
+func update_map(x: int, y: int, width: int, height: int) -> void:
     # print("update_map: ", [x, y, width, height])
     var start := OS.get_ticks_usec()
 
@@ -260,8 +296,8 @@ func update_map(x: int, y: int, width: int, height: int) -> void :
 
     print("collision_update: %s pixels in %sms" % [count, time])
 
-static func calculate_index(x: int, y: int, width: int) -> int :
+static func calculate_index(x: int, y: int, width: int) -> int:
     return y * width + x
 
-static func calculate_position(index: int, width: int) -> Vector2 :
+static func calculate_position(index: int, width: int) -> Vector2:
     return Vector2(index % width, index / width)

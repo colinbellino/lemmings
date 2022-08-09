@@ -1,13 +1,17 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://Scripts/Game.gd" type="Script" id=1]
 [ext_resource path="res://Scripts/DebugDraw.gd" type="Script" id=2]
 [ext_resource path="res://Art/map_02.png" type="Texture" id=3]
 [ext_resource path="res://Unit.tscn" type="PackedScene" id=4]
+[ext_resource path="res://Art/cursor_default.png" type="Texture" id=5]
+[ext_resource path="res://Art/cursor_border.png" type="Texture" id=6]
 
 [node name="Root" type="Node2D"]
 script = ExtResource( 1 )
 map_original_texture = ExtResource( 3 )
+cursor_default = ExtResource( 5 )
+cursor_border = ExtResource( 6 )
 unit_prefab = ExtResource( 4 )
 
 [node name="Debug" type="CanvasLayer" parent="."]
@@ -33,30 +37,36 @@ text = "DEBUG"
 
 [node name="Action0" type="Button" parent="HUD"]
 unique_name_in_owner = true
-margin_left = 64.0
-margin_top = 944.0
-margin_right = 84.0
-margin_bottom = 964.0
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -464.0
+margin_top = 64.0
+margin_right = -364.0
+margin_bottom = 84.0
 rect_scale = Vector2( 4, 4 )
-text = "0"
+text = "Bomb square"
 
 [node name="Action1" type="Button" parent="HUD"]
 unique_name_in_owner = true
-margin_left = 192.0
-margin_top = 944.0
-margin_right = 212.0
-margin_bottom = 964.0
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -464.0
+margin_top = 192.0
+margin_right = -364.0
+margin_bottom = 212.0
 rect_scale = Vector2( 4, 4 )
-text = "1"
+text = "Spawn unit"
 
 [node name="Action2" type="Button" parent="HUD"]
 unique_name_in_owner = true
-margin_left = 320.0
-margin_top = 944.0
-margin_right = 340.0
-margin_bottom = 964.0
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -464.0
+margin_top = 320.0
+margin_right = -364.0
+margin_bottom = 340.0
 rect_scale = Vector2( 4, 4 )
-text = "2"
+text = "Job: dig"
 
 [node name="Scaler" type="Node2D" parent="."]
 unique_name_in_owner = true
