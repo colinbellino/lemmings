@@ -25,7 +25,8 @@ export var cursor_default : Texture
 export var cursor_border : Texture
 export var unit_prefab : PackedScene
 
-var next_tick : float
+var tick_count : int
+var next_tick_at : float
 var tool_primary : int = TOOL_JOB_DIG
 var tool_secondary : int = TOOL_SPAWN_UNIT
 var units : Array = []
@@ -107,9 +108,9 @@ func _process(_delta) -> void:
     debug_label.set_text("FPS: %s" % Performance.get_monitor(Performance.TIME_FPS))
 
     var now := OS.get_ticks_msec()
-    if now >= next_tick:
+    if now >= next_tick_at:
         tick()
-        next_tick = now + TICK_SPEED_IN_MILLISECONDS
+        next_tick_at = now + TICK_SPEED_IN_MILLISECONDS
 
 func _unhandled_input(event) -> void:
     if event is InputEventMouseMotion:
@@ -148,7 +149,8 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
 
     match tool_id:
         TOOL_DESTROY_RECT:
-            destroy_rect(x, y, 26, 26)
+            var size = 20
+            destroy_rect(x - size / 2, y - size / 2, size, size)
         TOOL_SPAWN_UNIT:
             if not is_solid(x, y):
                 var unit := spawn_unit(x, y)
@@ -161,7 +163,8 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
                     unit.job_id = Unit.JOB_NONE
                 else: 
                     unit.job_id = Unit.JOB_DIG
-                unit.job_started_at = OS.get_ticks_msec()
+                    unit.job_duration = 300
+                unit.job_started_at = tick_count
             print("TODO: Dig!")
 
 func select_tool(tool_id: int) -> void: 
@@ -185,12 +188,21 @@ func tick() -> void:
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             print("%s: OOB" % unit.name)
             continue
-            
+    
+        if unit.job_id != Unit.JOB_NONE:
+            if tick_count >= unit.job_started_at + unit.job_duration:
+                unit.job_id = Unit.JOB_NONE
+
+        # TODO: Check if we can walk down a pixel before falling
         var is_grounded := is_solid(ground_check_pos_x, ground_check_pos_y)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
         if is_grounded:
             if unit.job_id == Unit.JOB_DIG:
                 unit.play("dig")
+                if (tick_count - unit.job_started_at) % 10 == 0:
+                    var unit_rect := unit.get_bounds();
+                    destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
+                    destination.y += 1
             else:
                 var wall_check_pos_x : int = unit.position.x + unit.direction
                 var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
@@ -223,6 +235,8 @@ func tick() -> void:
         
         unit.position = destination
 
+    tick_count += 1
+
 func viewport_to_map_position(pos: Vector2) -> Vector2:
     return pos / SCALE
 
@@ -242,8 +256,8 @@ func spawn_unit(x: int, y: int) -> Unit:
 func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void:
     var pixels_to_delete : PoolIntArray = []
 
-    for offset_x in range(-width / 2, width / 2):
-        for offset_y in range(-height / 2, height / 2):
+    for offset_x in range(0, width):
+        for offset_y in range(0, height):
             var pos_x = origin_x + offset_x
             var pos_y = origin_y + offset_y
             if is_in_bounds(pos_x, pos_y):
@@ -256,7 +270,7 @@ func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void
     for index in pixels_to_delete:
         map_data[index] = PIXEL_EMPTY
 
-    update_map(origin_x - width / 2, origin_y - height / 2, width, height)
+    update_map(origin_x, origin_y, width, height)
 
 func is_solid(x: int, y: int) -> bool: 
     if not is_in_bounds(x, y):
