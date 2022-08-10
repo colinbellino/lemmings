@@ -3,6 +3,7 @@ class_name Game
 
 const GAME_SCALE : int = 6
 const TICK_SPEED : int = 50
+const TIME_SCALE : int = 1
 const UNITS_MAX : int = 100
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
@@ -36,8 +37,8 @@ export var entrance_prefab: PackedScene
 export var entrance_color: Color
 export var background_color : Color = Color(0, 0, 0, 0)
 
+var now : float
 var game_scale : int
-var tick_speed : int
 var tick_count : int
 var next_tick_at : float
 var tool_primary : int = TOOL_JOB_DIG
@@ -61,7 +62,7 @@ var spawn_rate : int = 50
 var spawn_active : bool
 
 func _ready() -> void:
-    tick_speed = TICK_SPEED
+    now = OS.get_ticks_msec()
     units.resize(UNITS_MAX)
     
     map_image = map_original_texture.get_data()
@@ -121,7 +122,9 @@ func _ready() -> void:
     yield(entrance_node, "animation_finished")
     spawn_active = true
 
-func _process(_delta) -> void:
+func _process(delta: float) -> void:
+    now += delta * 1000 # Delta is in seconds, now in Milliseconds
+
     if Input.is_action_just_released("debug_1"):
         toggle_debug()
         
@@ -142,9 +145,9 @@ func _process(_delta) -> void:
         scaler_node.scale = Vector2(game_scale, game_scale)
 
     if Input.is_key_pressed(KEY_SHIFT):
-        tick_speed = TICK_SPEED / 6
+        Engine.time_scale = TIME_SCALE * 6
     else:
-        tick_speed = TICK_SPEED
+        Engine.time_scale = TIME_SCALE
         
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
@@ -166,10 +169,9 @@ func _process(_delta) -> void:
         "Goal": "%s / %s" % [exited_count, goal_count],
     }, "\t"))
 
-    var now := OS.get_ticks_msec()
     if now >= next_tick_at:
         tick()
-        next_tick_at = now + tick_speed
+        next_tick_at = now + TICK_SPEED
 
 func _unhandled_input(event) -> void:
     if event is InputEventMouseMotion:
@@ -237,7 +239,7 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
                     unit.job_id = Unit.JOB_NONE
                 else: 
                     unit.job_id = Unit.JOB_DIG
-                    unit.job_duration = 300
+                    unit.job_duration = 145
                 unit.job_started_at = tick_count
 
 func select_tool(tool_id: int) -> void: 
@@ -274,10 +276,6 @@ func tick() -> void:
             unit.exited = true
             exited_count += 1
             continue
-        
-        if unit.job_id != Unit.JOB_NONE:
-            if tick_count >= unit.job_started_at + unit.job_duration:
-                unit.job_id = Unit.JOB_NONE
 
         debug_draw.add_rect(unit.get_bounds(), Color.green)
 
@@ -289,9 +287,13 @@ func tick() -> void:
                 Unit.JOB_DIG:
                     unit.play("dig")
                     if (tick_count - unit.job_started_at) % 10 == 0:
-                        var unit_rect := unit.get_bounds();
+                        var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y + 3, unit.width, 3)
+                        debug_draw.add_rect(unit_rect, Color.red)
                         destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
-                        destination.y += 1
+
+                        var is_done := tick_count >= unit.job_started_at + unit.job_duration
+                        if not is_done:
+                            destination.y += 1
                 _:
                     var wall_check_pos_x : int = unit.position.x + unit.direction
                     var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
@@ -321,8 +323,11 @@ func tick() -> void:
             # Fall down
             unit.play("fall")
             destination.y += 1
-        
+
         unit.position = destination
+        
+        if unit.job_id != Unit.JOB_NONE && tick_count >= unit.job_started_at + unit.job_duration:
+            unit.job_id = Unit.JOB_NONE
 
     tick_count += 1
 
@@ -338,6 +343,7 @@ func spawn_unit(x: int, y: int) -> Unit:
     unit.name = "Unit %s" % units_count
     unit.position.x = x
     unit.position.y = y - unit.height / 2
+    unit.play("fall")
 
     units[units_count] = unit
     scaler_node.add_child(unit)
