@@ -115,11 +115,16 @@ func _process(_delta) -> void:
         toggle_debug()
         
     if Input.is_action_just_released("debug_2"):
-        print("Toggle map")
         map_sprite.visible = !map_sprite.visible
 
     if Input.is_action_just_released("ui_select"):
         update_map(0, 0, map_width, map_height)
+
+    if Input.is_action_just_released("ui_down"):
+        spawn_rate = clamp(spawn_rate + 10, 10, 100)
+
+    if Input.is_action_just_released("ui_up"):
+        spawn_rate = clamp(spawn_rate - 10, 10, 100)
 
     if Input.is_action_just_released("ui_accept"):
         game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
@@ -145,6 +150,8 @@ func _process(_delta) -> void:
     debug_label.set_text(JSON.print({ 
         "FPS": Performance.get_monitor(Performance.TIME_FPS),
         "Scale": game_scale,
+        "Units": "%s / %s" % [units_count, units.size()],
+        "Spawn rate": spawn_rate,
         "Goal": "%s / %s" % [exited_count, goal_count],
     }, "\t"))
 
@@ -211,7 +218,6 @@ func select_tool(tool_id: int) -> void:
     tool_primary = tool_id
 
 func toggle_debug() -> void: 
-    print("Toggle debug")
     collision_sprite.visible = !collision_sprite.visible
     debug_draw.visible = !debug_draw.visible
 
@@ -294,6 +300,10 @@ func viewport_to_map_position(pos: Vector2) -> Vector2:
     return pos / GAME_SCALE
 
 func spawn_unit(x: int, y: int) -> Unit: 
+    if units_count >= units.size():
+        print("Max units reached (%s)" % units.size())
+        return null
+
     var unit : Unit = unit_prefab.instance()
     unit.name = "Unit %s" % units_count
     unit.position.x = x
