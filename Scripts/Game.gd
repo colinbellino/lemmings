@@ -1,10 +1,9 @@
 extends Node2D
 class_name Game
 
-const SCALE : int = 6
-const TICK_SPEED_IN_MILLISECONDS : int = 50
+const GAME_SCALE : int = 6
+const TICK_SPEED : int = 50
 const UNITS_MAX : int = 100
-
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
 const PIXEL_EXIT : int = 1 << 2
@@ -31,6 +30,8 @@ export var entrance_prefab: PackedScene
 export var entrance_color: Color
 export var background_color : Color = Color(0, 0, 0, 0)
 
+var game_scale : int
+var tick_speed : int
 var tick_count : int
 var next_tick_at : float
 var tool_primary : int = TOOL_JOB_DIG
@@ -48,11 +49,14 @@ var entrance_position : Vector2
 var entrance_node : Node
 var exit_position : Vector2
 var exit_node : Node
+var exited_count : int
+var goal_count : int = 10
+var spawn_rate : int = 50
 
 func _ready() -> void:
+    tick_speed = TICK_SPEED
     units.resize(UNITS_MAX)
-    scaler_node.scale = Vector2(SCALE, SCALE)
-
+    
     map_image = map_original_texture.get_data()
     map_width = map_image.get_width()
     map_height = map_image.get_height()
@@ -84,18 +88,22 @@ func _ready() -> void:
     collision_image.create(map_width, map_height, false, map_image.get_format())
     collision_texture = ImageTexture.new()
 
+    # Init scale
+    game_scale = GAME_SCALE
+    scaler_node.scale = Vector2(game_scale, game_scale)
+
     # Spawn the entrance and exit
     print("entrance_position: ", entrance_position)
     entrance_node = entrance_prefab.instance()
     entrance_node.position = entrance_position
-    scaler_node.add_child(entrance_node)
+    map_sprite.add_child(entrance_node)
     print("exit_position: ", exit_position)
     exit_node = exit_prefab.instance()
     exit_node.position = exit_position
-    scaler_node.add_child(exit_node)
+    map_sprite.add_child(exit_node)
 
-    update_map(0, 0, map_width, map_height)
     set_cursor(cursor_default)
+    update_map(0, 0, map_width, map_height)
     
     toggle_debug()
     action0_button.connect("pressed", self, "select_tool", [TOOL_DESTROY_RECT])
@@ -114,11 +122,18 @@ func _process(_delta) -> void:
         update_map(0, 0, map_width, map_height)
 
     if Input.is_action_just_released("ui_accept"):
-        pass
+        game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
+        scaler_node.scale = Vector2(game_scale, game_scale)
+
+    if Input.is_key_pressed(KEY_SHIFT):
+        tick_speed = TICK_SPEED / 4
+    else:
+        tick_speed = TICK_SPEED
         
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
+    # Update cursor
     var mouse_position := get_viewport().get_mouse_position()
     var mouse_map_position := viewport_to_map_position(mouse_position)
     var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
@@ -127,12 +142,16 @@ func _process(_delta) -> void:
     else:
         set_cursor(cursor_default)
 
-    debug_label.set_text("FPS: %s" % Performance.get_monitor(Performance.TIME_FPS))
+    debug_label.set_text(JSON.print({ 
+        "FPS": Performance.get_monitor(Performance.TIME_FPS),
+        "Scale": game_scale,
+        "Goal": "%s / %s" % [exited_count, goal_count],
+    }, "\t"))
 
     var now := OS.get_ticks_msec()
     if now >= next_tick_at:
         tick()
-        next_tick_at = now + TICK_SPEED_IN_MILLISECONDS
+        next_tick_at = now + tick_speed
 
 func _unhandled_input(event) -> void:
     if event is InputEventMouseMotion:
@@ -197,10 +216,14 @@ func toggle_debug() -> void:
     debug_draw.visible = !debug_draw.visible
 
 func tick() -> void: 
+    if tick_count % spawn_rate == 0:
+        spawn_unit(entrance_position.x, entrance_position.y)
+
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
 
-        debug_draw.add_rect(unit.get_bounds(), Color.green)
+        if unit.exited:
+            continue
 
         var destination := unit.position
         var ground_check_pos_x : int = unit.position.x
@@ -211,13 +234,16 @@ func tick() -> void:
             continue
 
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
-            unit.job_id = Unit.JOB_EXIT
-            unit.job_started_at = tick_count
-            unit.job_duration = 10
-
+            unit.play("exit")
+            unit.exited = true
+            exited_count += 1
+            continue
+        
         if unit.job_id != Unit.JOB_NONE:
             if tick_count >= unit.job_started_at + unit.job_duration:
                 unit.job_id = Unit.JOB_NONE
+
+        debug_draw.add_rect(unit.get_bounds(), Color.green)
 
         # TODO: Check if we can walk down a pixel before falling
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXEL_SOLID)
@@ -230,10 +256,6 @@ func tick() -> void:
                         var unit_rect := unit.get_bounds();
                         destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
                         destination.y += 1
-                Unit.JOB_EXIT:
-                    unit.play("exit")
-                    if (tick_count - unit.job_started_at) == unit.job_duration:
-                        unit.visible = false
                 _:
                     var wall_check_pos_x : int = unit.position.x + unit.direction
                     var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
@@ -269,7 +291,7 @@ func tick() -> void:
     tick_count += 1
 
 func viewport_to_map_position(pos: Vector2) -> Vector2:
-    return pos / SCALE
+    return pos / GAME_SCALE
 
 func spawn_unit(x: int, y: int) -> Unit: 
     var unit : Unit = unit_prefab.instance()

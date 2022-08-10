@@ -17,4 +17,4 @@ animations = [ {
 [node name="Exit00" type="AnimatedSprite"]
 frames = SubResource( 2 )
 animation = "idle"
-offset = Vector2( 0, -11.5 )
+offset = Vector2( -1, -11.5 )
