@@ -185,7 +185,6 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
                     unit.job_id = Unit.JOB_DIG
                     unit.job_duration = 300
                 unit.job_started_at = tick_count
-            print("TODO: Dig!")
 
 func select_tool(tool_id: int) -> void: 
     tool_primary = tool_id
