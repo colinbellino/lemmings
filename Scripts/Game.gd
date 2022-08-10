@@ -3,9 +3,11 @@ class_name Game
 
 const SCALE : int = 6
 const TICK_SPEED_IN_MILLISECONDS : int = 50
+const UNITS_MAX : int = 100
+
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
-const UNITS_MAX : int = 100
+const PIXEL_EXIT : int = 1 << 2
 const TOOL_DESTROY_RECT : int = 0
 const TOOL_SPAWN_UNIT : int = 1
 const TOOL_JOB_DIG : int = 2
@@ -67,7 +69,7 @@ func _ready() -> void:
                 value = PIXEL_SOLID
             if color.is_equal_approx(exit_color):
                 exit_position = Vector2(x, y)
-                value = PIXEL_EMPTY
+                value = PIXEL_EMPTY & PIXEL_EXIT
             if color.is_equal_approx(entrance_color):
                 entrance_position = Vector2(x, y)
                 value = PIXEL_EMPTY
@@ -151,12 +153,12 @@ func get_unit_at(x: int, y: int) -> int:
 
     for unit_index in range(0, units_count):
         var unit = units[unit_index]
-        if is_point_inside(Vector2(x, y), unit.get_bounds()):
+        if is_inside_rect(Vector2(x, y), unit.get_bounds()):
             return unit_index
 
     return -1
 
-func is_point_inside(point: Vector2, rect: Rect2) -> bool:
+func is_inside_rect(point: Vector2, rect: Rect2) -> bool:
     return (point.x >= rect.position.x && point.x <= rect.position.x + rect.size.x) \
         && (point.y >= rect.position.y && point.y <= rect.position.y + rect.size.y)
 
@@ -172,7 +174,7 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
             var size = 20
             destroy_rect(x - size / 2, y - size / 2, size, size)
         TOOL_SPAWN_UNIT:
-            if not is_solid(x, y):
+            if not has_flag(x, y, PIXEL_SOLID):
                 var unit := spawn_unit(x, y)
                 print("%s spawned" % unit.name)
         TOOL_JOB_DIG:
@@ -201,52 +203,62 @@ func tick() -> void:
         debug_draw.add_rect(unit.get_bounds(), Color.green)
 
         var destination := unit.position
-        var ground_check_pos_x := unit.position.x
-        var ground_check_pos_y := unit.position.y + unit.height / 2
+        var ground_check_pos_x : int = unit.position.x
+        var ground_check_pos_y : int = unit.position.y + unit.height / 2
 
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             print("%s: OOB" % unit.name)
             continue
-    
+
+        if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
+            unit.job_id = Unit.JOB_EXIT
+            unit.job_started_at = tick_count
+            unit.job_duration = 10
+
         if unit.job_id != Unit.JOB_NONE:
             if tick_count >= unit.job_started_at + unit.job_duration:
                 unit.job_id = Unit.JOB_NONE
 
         # TODO: Check if we can walk down a pixel before falling
-        var is_grounded := is_solid(ground_check_pos_x, ground_check_pos_y)
+        var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXEL_SOLID)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
         if is_grounded:
-            if unit.job_id == Unit.JOB_DIG:
-                unit.play("dig")
-                if (tick_count - unit.job_started_at) % 10 == 0:
-                    var unit_rect := unit.get_bounds();
-                    destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
-                    destination.y += 1
-            else:
-                var wall_check_pos_x : int = unit.position.x + unit.direction
-                var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
-                var destination_offset_y := 0
-                var hit_wall := false
-                
-                for offset_y in range(0, -unit.climb_step, -1):
-                    var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
-                    debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
-                    hit_wall = is_solid(wall_check_pos_x, wall_check_pos_y_with_offset)
+            match unit.job_id:
+                Unit.JOB_DIG:
+                    unit.play("dig")
+                    if (tick_count - unit.job_started_at) % 10 == 0:
+                        var unit_rect := unit.get_bounds();
+                        destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
+                        destination.y += 1
+                Unit.JOB_EXIT:
+                    unit.play("exit")
+                    if (tick_count - unit.job_started_at) == unit.job_duration:
+                        unit.visible = false
+                _:
+                    var wall_check_pos_x : int = unit.position.x + unit.direction
+                    var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
+                    var destination_offset_y := 0
+                    var hit_wall := false
+                    
+                    for offset_y in range(0, -unit.climb_step, -1):
+                        var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
+                        debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
+                        hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXEL_SOLID)
 
-                    if not hit_wall:
-                        destination_offset_y = offset_y
-                        break
+                        if not hit_wall:
+                            destination_offset_y = offset_y
+                            break
 
-                if hit_wall:
-                    # Turn around
-                    unit.direction *= -1
-                    unit.flip_h = unit.direction == -1
-                else:
-                    # Walk forward
-                    destination.y += destination_offset_y
-                    destination.x += unit.direction
+                    if hit_wall:
+                        # Turn around
+                        unit.direction *= -1
+                        unit.flip_h = unit.direction == -1
+                    else:
+                        # Walk forward
+                        destination.y += destination_offset_y
+                        destination.x += unit.direction
 
-                unit.play("walk")
+                        unit.play("walk")
         else:
             # Fall down
             unit.play("fall")
@@ -291,11 +303,11 @@ func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void
 
     update_map(origin_x, origin_y, width, height)
 
-func is_solid(x: int, y: int) -> bool: 
+func has_flag(x: int, y: int, flag: int) -> bool: 
     if not is_in_bounds(x, y):
         return false
     var index := calculate_index(x, y, map_width)
-    return map_data[index] == PIXEL_SOLID
+    return map_data[index] & flag != 0
 
 func is_in_bounds(x: int, y: int) -> bool:
     return x > 0 && x < map_width && y > 0 && y < map_height

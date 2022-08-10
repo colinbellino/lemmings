@@ -3,6 +3,7 @@ extends AnimatedSprite
 
 const JOB_NONE : int = 0
 const JOB_DIG : int = 1
+const JOB_EXIT : int = 99
 
 # Left: -1 | Right: 1
 var direction : int = 1
