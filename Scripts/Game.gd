@@ -10,6 +10,8 @@ const PIXEL_EXIT : int = 1 << 2
 const TOOL_DESTROY_RECT : int = 0
 const TOOL_SPAWN_UNIT : int = 1
 const TOOL_JOB_DIG : int = 2
+const CURSOR_DEFAULT : int = 0
+const CURSOR_BORDER : int = 1
 
 onready var scaler_node : Node2D = get_node("%Scaler")
 onready var map_sprite : Sprite = get_node("%Map")
@@ -21,8 +23,12 @@ onready var action1_button := get_node("%Action1")
 onready var action2_button := get_node("%Action2")
 
 export var map_original_texture : Texture
-export var cursor_default : Texture
-export var cursor_border : Texture
+export var cursor_default_x1 : Texture
+export var cursor_default_x2 : Texture
+export var cursor_default_x4 : Texture
+export var cursor_border_x1 : Texture
+export var cursor_border_x2 : Texture
+export var cursor_border_x4 : Texture
 export var unit_prefab : PackedScene
 export var exit_prefab : PackedScene
 export var exit_color: Color
@@ -103,7 +109,7 @@ func _ready() -> void:
     exit_node.position = exit_position
     map_sprite.add_child(exit_node)
 
-    set_cursor(cursor_default)
+    set_cursor(CURSOR_DEFAULT)
     update_map(0, 0, map_width, map_height)
     
     toggle_debug()
@@ -148,9 +154,9 @@ func _process(_delta) -> void:
     var mouse_map_position := viewport_to_map_position(mouse_position)
     var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
     if unit_index > -1:
-        set_cursor(cursor_border)
+        set_cursor(CURSOR_BORDER)
     else:
-        set_cursor(cursor_default)
+        set_cursor(CURSOR_DEFAULT)
 
     debug_label.set_text(JSON.print({ 
         "FPS": Performance.get_monitor(Performance.TIME_FPS),
@@ -193,7 +199,22 @@ func is_inside_rect(point: Vector2, rect: Rect2) -> bool:
     return (point.x >= rect.position.x && point.x <= rect.position.x + rect.size.x) \
         && (point.y >= rect.position.y && point.y <= rect.position.y + rect.size.y)
 
-func set_cursor(cursor: Texture) -> void:
+func set_cursor(cursor_id: int) -> void:
+    var cursor : Texture
+    match cursor_id:
+        CURSOR_DEFAULT:
+            cursor = cursor_default_x1
+            if game_scale >= 2:
+                cursor = cursor_default_x2
+            if game_scale >= 4:
+                cursor = cursor_default_x4
+        CURSOR_BORDER:
+            cursor = cursor_border_x1
+            if game_scale >= 2:
+                cursor = cursor_border_x2
+            if game_scale >= 4:
+                cursor = cursor_border_x4
+
     Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
 
 func use_tool(tool_id: int, x: int, y: int) -> void: 
@@ -306,7 +327,7 @@ func tick() -> void:
     tick_count += 1
 
 func viewport_to_map_position(pos: Vector2) -> Vector2:
-    return pos / GAME_SCALE
+    return pos / game_scale
 
 func spawn_unit(x: int, y: int) -> Unit: 
     if units_count >= units.size():
