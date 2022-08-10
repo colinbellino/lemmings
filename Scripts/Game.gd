@@ -231,6 +231,8 @@ func tick() -> void:
     if spawn_active:
         if tick_count % spawn_rate == 0:
             spawn_unit(entrance_position.x, entrance_position.y)
+            if units_count >= units.size():
+                spawn_active = false
 
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
