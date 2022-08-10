@@ -2,7 +2,6 @@ extends Node2D
 class_name Game
 
 const SCALE : int = 6
-const BACKGROUND_COLOR : Color = Color.transparent
 const TICK_SPEED_IN_MILLISECONDS : int = 50
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
@@ -24,6 +23,11 @@ export var map_original_texture : Texture
 export var cursor_default : Texture
 export var cursor_border : Texture
 export var unit_prefab : PackedScene
+export var exit_prefab : PackedScene
+export var exit_color: Color
+export var entrance_prefab: PackedScene
+export var entrance_color: Color
+export var background_color : Color = Color(0, 0, 0, 0)
 
 var tick_count : int
 var next_tick_at : float
@@ -38,6 +42,10 @@ var map_width : int
 var map_height : int
 var collision_texture : Texture
 var collision_image : Image
+var entrance_position : Vector2
+var entrance_node : Node
+var exit_position : Vector2
+var exit_node : Node
 
 func _ready() -> void:
     units.resize(UNITS_MAX)
@@ -47,35 +55,47 @@ func _ready() -> void:
     map_width = map_image.get_width()
     map_height = map_image.get_height()
 
-    var width := map_image.get_width()
-    var height := map_image.get_height()
-    map_data.resize(width * height)
-    
+    # Extract the map data from the image
+    map_data.resize(map_width * map_height)
     map_image.lock()
-    for y in range(0, height):
-        for x in range(0, width):
-            var index := calculate_index(x, y, width as int) 
+    for y in range(0, map_height):
+        for x in range(0, map_width):
+            var index := calculate_index(x, y, map_width) 
             var color := map_image.get_pixel(x, y)
             var value := PIXEL_EMPTY
             if color.a > 0:
                 value = PIXEL_SOLID
+            if color.is_equal_approx(exit_color):
+                exit_position = Vector2(x, y)
+                value = PIXEL_EMPTY
+            if color.is_equal_approx(entrance_color):
+                entrance_position = Vector2(x, y)
+                value = PIXEL_EMPTY
             map_data.set(index, value)
     map_image.unlock()
 
+    # Prepare the images
     map_texture = ImageTexture.new()
     map_texture.create_from_image(map_image, 0)
     map_sprite.texture = map_texture
-
     collision_image = Image.new()
-    collision_image.create(width, height, false, map_image.get_format())
+    collision_image.create(map_width, map_height, false, map_image.get_format())
     collision_texture = ImageTexture.new()
 
-    update_map(0, 0, map_image.get_width(), map_image.get_height())
+    # Spawn the entrance and exit
+    print("entrance_position: ", entrance_position)
+    entrance_node = entrance_prefab.instance()
+    entrance_node.position = entrance_position
+    scaler_node.add_child(entrance_node)
+    print("exit_position: ", exit_position)
+    exit_node = exit_prefab.instance()
+    exit_node.position = exit_position
+    scaler_node.add_child(exit_node)
 
-    toggle_debug()
-
+    update_map(0, 0, map_width, map_height)
     set_cursor(cursor_default)
-
+    
+    toggle_debug()
     action0_button.connect("pressed", self, "select_tool", [TOOL_DESTROY_RECT])
     action1_button.connect("pressed", self, "select_tool", [TOOL_SPAWN_UNIT])
     action2_button.connect("pressed", self, "select_tool", [TOOL_JOB_DIG])
@@ -89,7 +109,7 @@ func _process(_delta) -> void:
         map_sprite.visible = !map_sprite.visible
 
     if Input.is_action_just_released("ui_select"):
-        update_map(0, 0, map_image.get_width(), map_image.get_height())
+        update_map(0, 0, map_width, map_height)
 
     if Input.is_action_just_released("ui_accept"):
         pass
@@ -209,7 +229,7 @@ func tick() -> void:
                 var destination_offset_y := 0
                 var hit_wall := false
                 
-                for offset_y in range(0, -3, -1):
+                for offset_y in range(0, -unit.climb_step, -1):
                     var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
                     debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
                     hit_wall = is_solid(wall_check_pos_x, wall_check_pos_y_with_offset)
@@ -289,7 +309,6 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     # print("update_map: ", [x, y, width, height])
     var start := OS.get_ticks_usec()
 
-    var map_width := map_image.get_width()
     var count := 0
 
     collision_image.lock()
@@ -301,8 +320,8 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
             var pos_x := index % map_width
             var pos_y := index / map_width
             var color := Color.transparent
-            if pixel== PIXEL_EMPTY:
-                map_image.set_pixel(pos_x, pos_y, BACKGROUND_COLOR)
+            if pixel == PIXEL_EMPTY:
+                map_image.set_pixel(pos_x, pos_y, Color.transparent)
             else:
                 color = Color.red
             collision_image.set_pixel(pos_x, pos_y, color)

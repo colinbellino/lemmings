@@ -8,6 +8,7 @@ const JOB_DIG : int = 1
 var direction : int = 1
 var width : int = 8
 var height : int = 10
+var climb_step : int = 5
 
 var job_id : int
 var job_started_at : int
