@@ -208,8 +208,10 @@ animations = [ {
 } ]
 
 [node name="Unit" type="AnimatedSprite"]
+z_index = 1
 frames = SubResource( 10 )
 animation = "fall"
+frame = 3
 playing = true
 offset = Vector2( 0, -3 )
 script = ExtResource( 2 )

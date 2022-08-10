@@ -52,6 +52,7 @@ var exit_node : Node
 var exited_count : int
 var goal_count : int = 10
 var spawn_rate : int = 50
+var spawn_active : bool
 
 func _ready() -> void:
     tick_speed = TICK_SPEED
@@ -110,6 +111,10 @@ func _ready() -> void:
     action1_button.connect("pressed", self, "select_tool", [TOOL_SPAWN_UNIT])
     action2_button.connect("pressed", self, "select_tool", [TOOL_JOB_DIG])
 
+    entrance_node.play("opening")
+    yield(entrance_node, "animation_finished")
+    spawn_active = true
+
 func _process(_delta) -> void:
     if Input.is_action_just_released("debug_1"):
         toggle_debug()
@@ -131,7 +136,7 @@ func _process(_delta) -> void:
         scaler_node.scale = Vector2(game_scale, game_scale)
 
     if Input.is_key_pressed(KEY_SHIFT):
-        tick_speed = TICK_SPEED / 4
+        tick_speed = TICK_SPEED / 6
     else:
         tick_speed = TICK_SPEED
         
@@ -220,10 +225,12 @@ func select_tool(tool_id: int) -> void:
 func toggle_debug() -> void: 
     collision_sprite.visible = !collision_sprite.visible
     debug_draw.visible = !debug_draw.visible
+    debug_label.visible = !debug_label.visible
 
 func tick() -> void: 
-    if tick_count % spawn_rate == 0:
-        spawn_unit(entrance_position.x, entrance_position.y)
+    if spawn_active:
+        if tick_count % spawn_rate == 0:
+            spawn_unit(entrance_position.x, entrance_position.y)
 
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
