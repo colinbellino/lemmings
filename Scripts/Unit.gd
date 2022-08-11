@@ -4,6 +4,7 @@ extends AnimatedSprite
 enum STATES {
     WALKING = 0,
     FALLING = 1,
+    DEAD = 2
 }
 
 enum JOBS {

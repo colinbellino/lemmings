@@ -14,6 +14,7 @@ const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
 
 const JOB_DIG_DURATION : int = 145
+const FALL_FATAL_DURATION : int = 50
 
 onready var scaler_node : Node2D = get_node("%Scaler")
 onready var map_sprite : Sprite = get_node("%Map")
@@ -40,12 +41,12 @@ export var background_color : Color = Color(0, 0, 0, 0)
 
 # Game data
 var now : float
+var now_tick : int
 var is_active : bool
 var game_scale : int
-var tick_now : int
 var next_tick_at : float
 var tool_primary : int = TOOL_UNIT_DIG
-var tool_secondary : int = TOOL_UNIT_SPAWN
+var tool_secondary : int = TOOL_DESTROY_RECT
 # Level data
 var units : Array = []
 var units_count : int
@@ -247,7 +248,7 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
                 else: 
                     unit.job = Unit.JOBS.DIG_VERTICAL
                     unit.job_duration = JOB_DIG_DURATION
-                unit.job_started_at = tick_now
+                unit.job_started_at = now_tick
 
 func select_tool(tool_id: int) -> void: 
     tool_primary = tool_id
@@ -262,7 +263,7 @@ func tick() -> void:
         return
 
     if spawn_is_active:
-        if tick_now % spawn_rate == 0:
+        if now_tick % spawn_rate == 0:
             spawn_unit(entrance_position.x, entrance_position.y)
             if units_count >= units.size():
                 spawn_is_active = false
@@ -302,8 +303,12 @@ func tick() -> void:
         match unit.state:
             Unit.STATES.FALLING:
                 if is_grounded:
-                    unit.state = Unit.STATES.WALKING
-                    unit.state_entered_at = tick_now
+                    if now_tick >= unit.state_entered_at + FALL_FATAL_DURATION:
+                        unit.state = Unit.STATES.DEAD
+                        unit.state_entered_at = now_tick
+                    else:
+                        unit.state = Unit.STATES.WALKING
+                        unit.state_entered_at = now_tick
                 else:
                     unit.play("fall")
                     destination.y += 1
@@ -313,12 +318,12 @@ func tick() -> void:
                     match unit.job:
                         Unit.JOBS.DIG_VERTICAL:
                             unit.play("dig")
-                            if (tick_now - unit.state_entered_at) % 10 == 0:
+                            if (now_tick - unit.state_entered_at) % 10 == 0:
                                 var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y + 3, unit.width, 3)
                                 debug_draw.add_rect(unit_rect, Color.red)
                                 destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
         
-                                var is_not_done := tick_now < unit.state_entered_at + JOB_DIG_DURATION
+                                var is_not_done := now_tick < unit.state_entered_at + JOB_DIG_DURATION
                                 if is_not_done:
                                     destination.y += 1
                         Unit.JOBS.NONE:
@@ -355,14 +360,18 @@ func tick() -> void:
                                 unit.play("walk")
                 else:
                     unit.state = Unit.STATES.FALLING
-                    unit.state_entered_at = tick_now
+                    unit.state_entered_at = now_tick
 
+            Unit.STATES.DEAD:
+                unit.status = Unit.STATUSES.DEAD
+                unit.play("dead_fall")
+                
         unit.position = destination
         
-        if unit.job_duration > -1 && tick_now >= unit.job_started_at + unit.job_duration:
+        if unit.job_duration > -1 && now_tick >= unit.job_started_at + unit.job_duration:
             unit.job = Unit.JOBS.NONE
 
-    tick_now += 1
+    now_tick += 1
 
     units_exited_count = 0
     units_dead_count = 0
