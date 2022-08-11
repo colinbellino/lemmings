@@ -1,22 +1,34 @@
 class_name Unit
 extends AnimatedSprite
 
-const JOB_NONE : int = 0
-const JOB_DIG : int = 1
+enum STATES {
+    WALKING = 0,
+    FALLING = 1,
+}
 
-const STATUS_ACTIVE : int = 0
-const STATUS_DEAD : int = 1
-const STATUS_EXITED : int = 2
+enum JOBS {
+    NONE = 0,
+    DIG_VERTICAL = 1,
+    DIG_HORIZONTAL = 1 << 2,
+}
 
-# Left: -1 | Right: 1
-var direction : int = 1
+enum STATUSES {
+    ACTIVE = 0
+    DEAD = 1
+    EXITED = 2
+}
+
+var status : int
+var state : int
+var state_entered_at : int
+var job : int
+var job_started_at : int
+var job_duration : int
 var width : int = 8
 var height : int = 10
 var climb_step : int = 5
-var job_id : int
-var job_started_at : int
-var job_duration : int
-var status : int
+# Left: -1 | Right: 1
+var direction : int = 1
 
 func get_bounds() -> Rect2:
     return Rect2(position.x - width / 2, position.y - height / 2, width, height)

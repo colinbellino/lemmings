@@ -8,10 +8,12 @@ const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
 const PIXEL_EXIT : int = 1 << 2
 const TOOL_DESTROY_RECT : int = 0
-const TOOL_SPAWN_UNIT : int = 1
-const TOOL_JOB_DIG : int = 2
+const TOOL_UNIT_SPAWN : int = 1
+const TOOL_UNIT_DIG : int = 2
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
+
+const JOB_DIG_DURATION : int = 145
 
 onready var scaler_node : Node2D = get_node("%Scaler")
 onready var map_sprite : Sprite = get_node("%Map")
@@ -40,10 +42,10 @@ export var background_color : Color = Color(0, 0, 0, 0)
 var now : float
 var is_active : bool
 var game_scale : int
-var tick_count : int
+var tick_now : int
 var next_tick_at : float
-var tool_primary : int = TOOL_JOB_DIG
-var tool_secondary : int = TOOL_SPAWN_UNIT
+var tool_primary : int = TOOL_UNIT_DIG
+var tool_secondary : int = TOOL_UNIT_SPAWN
 # Level data
 var units : Array = []
 var units_count : int
@@ -120,8 +122,8 @@ func _ready() -> void:
     
     toggle_debug()
     action0_button.connect("pressed", self, "select_tool", [TOOL_DESTROY_RECT])
-    action1_button.connect("pressed", self, "select_tool", [TOOL_SPAWN_UNIT])
-    action2_button.connect("pressed", self, "select_tool", [TOOL_JOB_DIG])
+    action1_button.connect("pressed", self, "select_tool", [TOOL_UNIT_SPAWN])
+    action2_button.connect("pressed", self, "select_tool", [TOOL_UNIT_DIG])
 
     entrance_node.play("opening")
     yield(entrance_node, "animation_finished")
@@ -232,20 +234,20 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
         TOOL_DESTROY_RECT:
             var size = 20
             destroy_rect(x - size / 2, y - size / 2, size, size)
-        TOOL_SPAWN_UNIT:
+        TOOL_UNIT_SPAWN:
             if not has_flag(x, y, PIXEL_SOLID):
                 var unit := spawn_unit(x, y)
                 print("%s spawned" % unit.name)
-        TOOL_JOB_DIG:
+        TOOL_UNIT_DIG:
             var unit_index := get_unit_at(x, y)
             if unit_index > -1:
                 var unit : Unit = units[unit_index]
-                if unit.job_id == Unit.JOB_DIG:
-                    unit.job_id = Unit.JOB_NONE
+                if unit.job == Unit.JOBS.DIG_VERTICAL:
+                    unit.job = Unit.JOBS.NONE
                 else: 
-                    unit.job_id = Unit.JOB_DIG
-                    unit.job_duration = 145
-                unit.job_started_at = tick_count
+                    unit.job = Unit.JOBS.DIG_VERTICAL
+                    unit.job_duration = JOB_DIG_DURATION
+                unit.job_started_at = tick_now
 
 func select_tool(tool_id: int) -> void: 
     tool_primary = tool_id
@@ -260,7 +262,7 @@ func tick() -> void:
         return
 
     if spawn_is_active:
-        if tick_count % spawn_rate == 0:
+        if tick_now % spawn_rate == 0:
             spawn_unit(entrance_position.x, entrance_position.y)
             if units_count >= units.size():
                 spawn_is_active = false
@@ -268,7 +270,13 @@ func tick() -> void:
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
 
-        if unit.status != Unit.STATUS_ACTIVE:
+        debug_draw.add_text(
+            unit.position + Vector2(-10, -10),
+            "%s | %s" % [Unit.STATES.keys()[unit.state], Unit.JOBS.keys()[unit.job]],
+            Color.white
+        )
+
+        if unit.status != Unit.STATUSES.ACTIVE:
             continue
 
         var destination := unit.position
@@ -277,12 +285,12 @@ func tick() -> void:
 
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             print("%s: OOB" % unit.name)
-            unit.status = Unit.STATUS_DEAD
+            unit.status = Unit.STATUSES.DEAD
             continue
 
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
-            unit.status = Unit.STATUS_EXITED
+            unit.status = Unit.STATUSES.EXITED
             continue
 
         debug_draw.add_rect(unit.get_bounds(), Color.green)
@@ -290,68 +298,79 @@ func tick() -> void:
         # TODO: Check if we can walk down a pixel before falling
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXEL_SOLID)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
-        if is_grounded:
-            match unit.job_id:
-                Unit.JOB_DIG:
-                    unit.play("dig")
-                    if (tick_count - unit.job_started_at) % 10 == 0:
-                        var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y + 3, unit.width, 3)
-                        debug_draw.add_rect(unit_rect, Color.red)
-                        destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
 
-                        var is_not_done := tick_count < unit.job_started_at + unit.job_duration
-                        if is_not_done:
-                            destination.y += 1
-                Unit.JOB_NONE:
-                    var wall_check_pos_x : int = unit.position.x + unit.direction
-                    var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
-                    var destination_offset_y := 0
-                    var hit_wall := false
-                    
-                    for offset_y in range(0, -unit.climb_step, -1):
-                        var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
-                        debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
-                        hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXEL_SOLID)
+        match unit.state:
+            Unit.STATES.FALLING:
+                if is_grounded:
+                    unit.state = Unit.STATES.WALKING
+                    unit.state_entered_at = tick_now
+                else:
+                    unit.play("fall")
+                    destination.y += 1
 
-                        if not hit_wall:
-                            destination_offset_y = offset_y
-                            break
+            Unit.STATES.WALKING:
+                if is_grounded:
+                    match unit.job:
+                        Unit.JOBS.DIG_VERTICAL:
+                            unit.play("dig")
+                            if (tick_now - unit.state_entered_at) % 10 == 0:
+                                var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y + 3, unit.width, 3)
+                                debug_draw.add_rect(unit_rect, Color.red)
+                                destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
+        
+                                var is_not_done := tick_now < unit.state_entered_at + JOB_DIG_DURATION
+                                if is_not_done:
+                                    destination.y += 1
+                        Unit.JOBS.NONE:
+                            var wall_check_pos_x : int = unit.position.x + unit.direction
+                            var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
+                            var destination_offset_y := 0
+                            var hit_wall := false
+                            
+                            for offset_y in range(0, -unit.climb_step, -1):
+                                var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
+                                debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
+                                hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXEL_SOLID)
 
-                    if hit_wall:
-                        # Turn around
-                        unit.direction *= -1
-                        unit.flip_h = unit.direction == -1
-                    else:
-                        for offset_y in range(1, unit.climb_step):
-                            var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
-                            debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
-                            if not has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXEL_SOLID):
-                                destination_offset_y = offset_y
+                                if not hit_wall:
+                                    destination_offset_y = offset_y
+                                    break
 
-                        # Walk forward
-                        destination.y += destination_offset_y
-                        destination.x += unit.direction
+                            if hit_wall:
+                                # Turn around
+                                unit.direction *= -1
+                                unit.flip_h = unit.direction == -1
+                            else:
+                                for offset_y in range(1, unit.climb_step):
+                                    var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
+                                    debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
+                                    if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXEL_SOLID):
+                                        break
+                                    destination_offset_y = offset_y
 
-                        unit.play("walk")
-        else:
-            # Fall down
-            unit.play("fall")
-            destination.y += 1
+                                # Walk forward
+                                destination.y += destination_offset_y
+                                destination.x += unit.direction
+
+                                unit.play("walk")
+                else:
+                    unit.state = Unit.STATES.FALLING
+                    unit.state_entered_at = tick_now
 
         unit.position = destination
         
-        if unit.job_id != Unit.JOB_NONE && tick_count >= unit.job_started_at + unit.job_duration:
-            unit.job_id = Unit.JOB_NONE
+        if unit.job_duration > -1 && tick_now >= unit.job_started_at + unit.job_duration:
+            unit.job = Unit.JOBS.NONE
 
-    tick_count += 1
+    tick_now += 1
 
     units_exited_count = 0
     units_dead_count = 0
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
-        if unit.status == Unit.STATUS_EXITED:
+        if unit.status == Unit.STATUSES.EXITED:
             units_exited_count += 1
-        if unit.status == Unit.STATUS_DEAD:
+        if unit.status == Unit.STATUSES.DEAD:
             units_dead_count += 1
 
     if units_dead_count + units_exited_count == units_max:
