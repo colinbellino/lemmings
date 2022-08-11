@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/10 A Task For Blockers and Bombers.mp3-fed2072693e4d58626f209bf82cbf92a.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/10 A Task For Blockers and Bombers.mp3"
+dest_files=[ "res://.import/10 A Task For Blockers and Bombers.mp3-fed2072693e4d58626f209bf82cbf92a.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

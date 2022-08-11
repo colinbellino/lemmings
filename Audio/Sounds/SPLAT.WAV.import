@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/SPLAT.WAV-24d95e9bdb69b02d4ccf9a1246d8c6a4.sample"
+
+[deps]
+
+source_file="res://Audio/Sounds/SPLAT.WAV"
+dest_files=[ "res://.import/SPLAT.WAV-24d95e9bdb69b02d4ccf9a1246d8c6a4.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0

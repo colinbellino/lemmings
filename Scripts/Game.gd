@@ -30,10 +30,12 @@ export var exit_color: Color
 export var entrance_prefab: PackedScene
 export var entrance_color: Color
 export var background_color : Color = Color(0, 0, 0, 0)
+export var sound_start : AudioStreamSample
+export var sound_door_open : AudioStreamSample
 export var sound_yippee : AudioStreamSample
 export var sound_splat : AudioStreamSample
 export var sound_assign_job : AudioStreamSample
-export var sound_start : AudioStreamSample
+export(Array, AudioStream) var musics : Array
 
 # Scene stuff
 var map_image : Image
@@ -48,7 +50,8 @@ onready var debug_draw : Control = get_node("%DebugCanvas")
 onready var action0_button : Button = get_node("%Action0")
 onready var action1_button : Button = get_node("%Action1")
 onready var action2_button : Button = get_node("%Action2")
-onready var audio_player : AudioStreamPlayer = get_node("%AudioPlayer")
+onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
+onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 
 # Game data
 var current_level : int
@@ -249,12 +252,20 @@ func unload_level() -> void:
 func start_level() -> void:
     print_stray_nodes()
 
+    audio_player_music.stream = musics[0]
+    audio_player_music.play()
+
+    yield(get_tree().create_timer(1), "timeout")
+
+    audio_player_sound.stream = sound_door_open
+    audio_player_sound.play()
+
     entrance_node.play("opening")
     yield(entrance_node, "animation_finished")
     spawn_is_active = true
 
-    audio_player.stream = sound_start
-    audio_player.play()
+    audio_player_sound.stream = sound_start
+    audio_player_sound.play()
 
 func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
@@ -315,8 +326,8 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                     else: 
                         unit.job = Unit.JOBS.DIG_VERTICAL
                         unit.job_duration = JOB_DIG_DURATION
-                        audio_player.stream = sound_assign_job
-                        audio_player.play()
+                        audio_player_sound.stream = sound_assign_job
+                        audio_player_sound.play()
                     unit.job_started_at = now_tick
 
 func select_tool(tool_id: int) -> void: 
@@ -361,9 +372,9 @@ func tick() -> void:
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
             unit.status = Unit.STATUSES.EXITED
-            audio_player.stream = sound_yippee
-            audio_player.pitch_scale = rand_range(0.9, 1.2)
-            audio_player.play()
+            audio_player_sound.stream = sound_yippee
+            audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
+            audio_player_sound.play()
             continue
 
         debug_draw.add_rect(unit.get_bounds(), Color.green)
@@ -437,9 +448,9 @@ func tick() -> void:
             Unit.STATES.DEAD:
                 unit.status = Unit.STATUSES.DEAD
                 unit.play("dead_fall")
-                audio_player.stream = sound_splat
-                audio_player.pitch_scale = rand_range(0.9, 1.2)
-                audio_player.play()
+                audio_player_sound.stream = sound_splat
+                audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
+                audio_player_sound.play()
                 
         unit.position = destination
         

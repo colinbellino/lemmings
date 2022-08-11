@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/06 Only Floaters Can Survive This.mp3-2e6d08f31365ed48e63090a10b46eae0.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/06 Only Floaters Can Survive This.mp3"
+dest_files=[ "res://.import/06 Only Floaters Can Survive This.mp3-2e6d08f31365ed48e63090a10b46eae0.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

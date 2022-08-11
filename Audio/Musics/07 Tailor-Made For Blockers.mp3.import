@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/07 Tailor-Made For Blockers.mp3-638bd5716e728d3ffe9f4e63f9d57ca8.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/07 Tailor-Made For Blockers.mp3"
+dest_files=[ "res://.import/07 Tailor-Made For Blockers.mp3-638bd5716e728d3ffe9f4e63f9d57ca8.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

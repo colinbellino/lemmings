@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/09 You Need Bashers This Time.mp3-3af3c8e61d003f7b620cf7bd77e60331.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/09 You Need Bashers This Time.mp3"
+dest_files=[ "res://.import/09 You Need Bashers This Time.mp3-3af3c8e61d003f7b620cf7bd77e60331.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

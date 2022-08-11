@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/14 Smile if You Love Lemmings.mp3-90ca7dc9027a2dc7b2934e8cba39365a.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/14 Smile if You Love Lemmings.mp3"
+dest_files=[ "res://.import/14 Smile if You Love Lemmings.mp3-90ca7dc9027a2dc7b2934e8cba39365a.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

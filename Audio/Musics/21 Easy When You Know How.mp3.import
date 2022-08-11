@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/21 Easy When You Know How.mp3-6cd84b36928feda0e6d711635ab10d43.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/21 Easy When You Know How.mp3"
+dest_files=[ "res://.import/21 Easy When You Know How.mp3-6cd84b36928feda0e6d711635ab10d43.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

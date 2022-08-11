@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/15 Keep Your Hair on Mr. Lemming.mp3-90d997f4a1217b84cccf1e7c573837bc.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/15 Keep Your Hair on Mr. Lemming.mp3"
+dest_files=[ "res://.import/15 Keep Your Hair on Mr. Lemming.mp3-90d997f4a1217b84cccf1e7c573837bc.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0

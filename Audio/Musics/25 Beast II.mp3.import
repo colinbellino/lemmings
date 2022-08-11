@@ -1,0 +1,15 @@
+[remap]
+
+importer="mp3"
+type="AudioStreamMP3"
+path="res://.import/25 Beast II.mp3-dc311d1b00f3edbc802065e9ec622051.mp3str"
+
+[deps]
+
+source_file="res://Audio/Musics/25 Beast II.mp3"
+dest_files=[ "res://.import/25 Beast II.mp3-dc311d1b00f3edbc802065e9ec622051.mp3str" ]
+
+[params]
+
+loop=true
+loop_offset=0
