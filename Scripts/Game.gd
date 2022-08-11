@@ -16,32 +16,12 @@ const CURSOR_BORDER : int = 1
 const JOB_DIG_DURATION : int = 145
 const FALL_FATAL_DURATION : int = 50
 
-# Resources & config
-export(Array, Texture) var levels : Array
-export var cursor_default_x1 : Texture
-export var cursor_default_x2 : Texture
-export var cursor_default_x4 : Texture
-export var cursor_border_x1 : Texture
-export var cursor_border_x2 : Texture
-export var cursor_border_x4 : Texture
-export var unit_prefab : PackedScene
-export var exit_prefab : PackedScene
-export var exit_color: Color
-export var entrance_prefab: PackedScene
-export var entrance_color: Color
-export var background_color : Color = Color(0, 0, 0, 0)
-export var sound_start : AudioStreamSample
-export var sound_door_open : AudioStreamSample
-export var sound_yippee : AudioStreamSample
-export var sound_splat : AudioStreamSample
-export var sound_assign_job : AudioStreamSample
-export(Array, AudioStream) var musics : Array
-
 # Scene stuff
 var map_image : Image
 var collision_image : Image
 var entrance_node : Node
 var exit_node : Node
+onready var config : Resource = ResourceLoader.load("res://default_game_config.tres")
 onready var scaler_node : Node2D = get_node("%Scaler")
 onready var map_sprite : Sprite = get_node("%Map")
 onready var collision_sprite : Sprite = get_node("%Collision")
@@ -99,7 +79,7 @@ func _ready() -> void:
     collision_image = Image.new()
 
     # Load and start the level
-    load_level(levels[current_level])
+    load_level(config.levels[current_level])
     is_ticking = true
     start_level()
  
@@ -116,7 +96,7 @@ func _process(delta: float) -> void:
         print("Restarting level")
         is_ticking = false
         unload_level()
-        load_level(levels[current_level])
+        load_level(config.levels[current_level])
         is_ticking = true
         start_level()
 
@@ -180,6 +160,7 @@ func _unhandled_input(event) -> void:
         if event.button_index == BUTTON_MIDDLE:
             use_tool(tool_tertiary, map_position.x, map_position.y, event.pressed)
 
+# TODO: Init goal, rate, tools, etc
 func load_level(texture: Texture) -> void:
     units.resize(units_max)
     
@@ -200,10 +181,10 @@ func load_level(texture: Texture) -> void:
             var value := PIXEL_EMPTY
             if color.a > 0:
                 value = PIXEL_SOLID
-            if color.is_equal_approx(exit_color):
+            if color.is_equal_approx(config.exit_color):
                 exit_position = Vector2(x, y)
                 value = PIXEL_EMPTY
-            if color.is_equal_approx(entrance_color):
+            if color.is_equal_approx(config.entrance_color):
                 entrance_position = Vector2(x, y)
                 value = PIXEL_EMPTY
             map_data.set(index, value)
@@ -226,11 +207,11 @@ func load_level(texture: Texture) -> void:
 
     # Spawn the entrance and exit
     print("entrance_position: ", entrance_position)
-    entrance_node = entrance_prefab.instance()
+    entrance_node = config.entrance_prefab.instance()
     entrance_node.position = entrance_position
     map_sprite.add_child(entrance_node)
     print("exit_position: ", exit_position)
-    exit_node = exit_prefab.instance()
+    exit_node = config.exit_prefab.instance()
     exit_node.position = exit_position
     map_sprite.add_child(exit_node)
 
@@ -252,19 +233,19 @@ func unload_level() -> void:
 func start_level() -> void:
     print_stray_nodes()
 
-    audio_player_music.stream = musics[0]
+    audio_player_music.stream = config.musics[0]
     audio_player_music.play()
 
     yield(get_tree().create_timer(1), "timeout")
 
-    audio_player_sound.stream = sound_door_open
+    audio_player_sound.stream = config.sound_door_open
     audio_player_sound.play()
 
     entrance_node.play("opening")
     yield(entrance_node, "animation_finished")
     spawn_is_active = true
 
-    audio_player_sound.stream = sound_start
+    audio_player_sound.stream = config.sound_start
     audio_player_sound.play()
 
 func get_unit_at(x: int, y: int) -> int:
@@ -286,17 +267,17 @@ func set_cursor(cursor_id: int) -> void:
     var cursor : Texture
     match cursor_id:
         CURSOR_DEFAULT:
-            cursor = cursor_default_x1
+            cursor = config.cursor_default_x1
             if game_scale >= 2:
-                cursor = cursor_default_x2
+                cursor = config.cursor_default_x2
             if game_scale >= 4:
-                cursor = cursor_default_x4
+                cursor = config.cursor_default_x4
         CURSOR_BORDER:
-            cursor = cursor_border_x1
+            cursor = config.cursor_border_x1
             if game_scale >= 2:
-                cursor = cursor_border_x2
+                cursor = config.cursor_border_x2
             if game_scale >= 4:
-                cursor = cursor_border_x4
+                cursor = config.cursor_border_x4
 
     Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
 
@@ -326,7 +307,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                     else: 
                         unit.job = Unit.JOBS.DIG_VERTICAL
                         unit.job_duration = JOB_DIG_DURATION
-                        audio_player_sound.stream = sound_assign_job
+                        audio_player_sound.stream = config.sound_assign_job
                         audio_player_sound.play()
                     unit.job_started_at = now_tick
 
@@ -372,7 +353,7 @@ func tick() -> void:
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
             unit.status = Unit.STATUSES.EXITED
-            audio_player_sound.stream = sound_yippee
+            audio_player_sound.stream = config.sound_yippee
             audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
             audio_player_sound.play()
             continue
@@ -448,7 +429,7 @@ func tick() -> void:
             Unit.STATES.DEAD:
                 unit.status = Unit.STATUSES.DEAD
                 unit.play("dead_fall")
-                audio_player_sound.stream = sound_splat
+                audio_player_sound.stream = config.sound_splat
                 audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
                 audio_player_sound.play()
                 
@@ -472,7 +453,7 @@ func tick() -> void:
         is_ticking = false
 
         if units_exited_count >= units_goal_count:
-            if current_level >= levels.size() - 1:
+            if current_level >= config.levels.size() - 1:
                 print("Game over")
                 unload_level()
             else:
@@ -480,14 +461,14 @@ func tick() -> void:
                 yield(get_tree().create_timer(2), "timeout")
                 unload_level()
                 current_level += 1
-                load_level(levels[current_level])
+                load_level(config.levels[current_level])
                 is_ticking = true
                 start_level()
         else:
             print("Restarting current level")
             yield(get_tree().create_timer(2), "timeout")
             unload_level()
-            load_level(levels[current_level])
+            load_level(config.levels[current_level])
             is_ticking = true
             start_level()
 
@@ -499,7 +480,7 @@ func spawn_unit(x: int, y: int) -> Unit:
         print("Max units reached (%s)" % units.size())
         return null
 
-    var unit : Unit = unit_prefab.instance()
+    var unit : Unit = config.unit_prefab.instance()
     unit.name = "Unit %s" % units_count
     unit.position.x = x
     unit.position.y = y - unit.height / 2
