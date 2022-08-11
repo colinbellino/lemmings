@@ -16,16 +16,7 @@ const CURSOR_BORDER : int = 1
 const JOB_DIG_DURATION : int = 145
 const FALL_FATAL_DURATION : int = 50
 
-onready var scaler_node : Node2D = get_node("%Scaler")
-onready var map_sprite : Sprite = get_node("%Map")
-onready var collision_sprite : Sprite = get_node("%Collision")
-onready var debug_label : Label = get_node("%DebugLabel")
-onready var debug_draw : Control = get_node("%DebugCanvas")
-onready var action0_button : Button = get_node("%Action0")
-onready var action1_button : Button = get_node("%Action1")
-onready var action2_button : Button = get_node("%Action2")
-onready var audio_player : AudioStreamPlayer = get_node("%AudioPlayer")
-
+# Resources & config
 export var map_original_texture : Texture
 export var cursor_default_x1 : Texture
 export var cursor_default_x2 : Texture
@@ -43,6 +34,21 @@ export var sound_yippee : AudioStreamSample
 export var sound_splat : AudioStreamSample
 export var sound_assign_job : AudioStreamSample
 export var sound_start : AudioStreamSample
+
+# Scene stuff
+var map_image : Image
+var collision_image : Image
+var entrance_node : Node
+var exit_node : Node
+onready var scaler_node : Node2D = get_node("%Scaler")
+onready var map_sprite : Sprite = get_node("%Map")
+onready var collision_sprite : Sprite = get_node("%Collision")
+onready var debug_label : Label = get_node("%DebugLabel")
+onready var debug_draw : Control = get_node("%DebugCanvas")
+onready var action0_button : Button = get_node("%Action0")
+onready var action1_button : Button = get_node("%Action1")
+onready var action2_button : Button = get_node("%Action2")
+onready var audio_player : AudioStreamPlayer = get_node("%AudioPlayer")
 
 # Game data
 var now : float
@@ -63,15 +69,11 @@ var units_max : int = 100
 var units_goal_count : int = 10
 var map_data : PoolIntArray = []
 var map_texture : Texture
-var map_image : Image
 var map_width : int
 var map_height : int
 var collision_texture : Texture
-var collision_image : Image
 var entrance_position : Vector2
-var entrance_node : Node
 var exit_position : Vector2
-var exit_node : Node
 var spawn_is_active : bool
 var spawn_rate : int = 50
 
