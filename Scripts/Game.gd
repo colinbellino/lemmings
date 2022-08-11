@@ -41,6 +41,7 @@ export var entrance_color: Color
 export var background_color : Color = Color(0, 0, 0, 0)
 export var sound_yippee : AudioStreamSample
 export var sound_splat : AudioStreamSample
+export var sound_assign_job : AudioStreamSample
 
 # Game data
 var now : float
@@ -265,6 +266,8 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
                 else: 
                     unit.job = Unit.JOBS.DIG_VERTICAL
                     unit.job_duration = JOB_DIG_DURATION
+                    audio_player.stream = sound_assign_job
+                    audio_player.play()
                 unit.job_started_at = now_tick
 
 func select_tool(tool_id: int) -> void: 
