@@ -44,22 +44,23 @@ var tool_primary : int = TOOL_PAINT_RECT
 var tool_secondary : int = TOOL_DESTROY_RECT
 var tool_tertiary : int = TOOL_UNIT_DIG
 var mouse_button_pressed : int
+
 # Level data
 var units : Array = []
-var units_count : int
-var units_exited_count : int
-var units_dead_count : int
-var units_max : int = 30
-var units_goal_count : int = 10
+var units_spawned : int
+var units_exited : int
+var units_dead : int
+var units_max : int
+var units_goal : int
 var map_data : PoolIntArray = []
-var map_texture : Texture
 var map_width : int
 var map_height : int
+var map_texture : Texture
 var collision_texture : Texture
 var entrance_position : Vector2
 var exit_position : Vector2
 var spawn_is_active : bool
-var spawn_rate : int = 50
+var spawn_rate : int
 
 func _ready() -> void:
     now = OS.get_ticks_msec()
@@ -75,7 +76,6 @@ func _ready() -> void:
     action1_button.connect("pressed", self, "select_tool", [TOOL_UNIT_SPAWN])
     action2_button.connect("pressed", self, "select_tool", [TOOL_UNIT_DIG])
 
-    map_texture = ImageTexture.new()
     collision_image = Image.new()
 
     # Load and start the level
@@ -138,9 +138,9 @@ func _process(delta: float) -> void:
     debug_label.set_text(JSON.print({ 
         "FPS": Performance.get_monitor(Performance.TIME_FPS),
         "Scale": game_scale,
-        "Units": "%s / %s" % [units_count, units.size()],
+        "Units": "%s / %s" % [units_spawned, units.size()],
         "Spawn rate": spawn_rate,
-        "Goal": "%s / %s" % [units_exited_count, units_goal_count],
+        "Goal": "%s / %s" % [units_exited, units_goal],
     }, "\t"))
 
     if now >= next_tick_at:
@@ -160,11 +160,15 @@ func _unhandled_input(event) -> void:
         if event.button_index == BUTTON_MIDDLE:
             use_tool(tool_tertiary, map_position.x, map_position.y, event.pressed)
 
-# TODO: Init goal, rate, tools, etc
-func load_level(texture: Texture) -> void:
+func load_level(level: Level) -> void:
+    # Initialize level data
+    map_image = level.texture.get_data()
+    units_max = level.units_max
+    units_goal = level.units_goal
+    spawn_rate = level.spawn_rate
+
     units.resize(units_max)
-    
-    map_image = texture.get_data()
+
     map_width = map_image.get_width()
     map_height = map_image.get_height()
 
@@ -200,10 +204,11 @@ func load_level(texture: Texture) -> void:
         return
 
     # Prepare the images
+    map_texture = ImageTexture.new()
     map_texture.create_from_image(map_image, 0)
     map_sprite.texture = map_texture
-    collision_image.create(map_width, map_height, false, map_image.get_format())
     collision_texture = ImageTexture.new()
+    collision_image.create(map_width, map_height, false, map_image.get_format())
 
     # Spawn the entrance and exit
     print("entrance_position: ", entrance_position)
@@ -218,12 +223,12 @@ func load_level(texture: Texture) -> void:
     update_map(0, 0, map_width, map_height)
 
 func unload_level() -> void:
-    for unit_index in units_count:
+    for unit_index in units_spawned:
         var unit : Unit = units[unit_index]
         unit.queue_free()
-    units_count = 0
-    units_exited_count = 0
-    units_dead_count = 0
+    units_spawned = 0
+    units_exited = 0
+    units_dead = 0
 
     collision_sprite.texture = null
     map_sprite.texture = null
@@ -252,7 +257,7 @@ func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
         return -1
 
-    for unit_index in range(0, units_count):
+    for unit_index in range(0, units_spawned):
         var unit = units[unit_index]
         if is_inside_rect(Vector2(x, y), unit.get_bounds()):
             return unit_index
@@ -326,10 +331,10 @@ func tick() -> void:
     if spawn_is_active:
         if now_tick % spawn_rate == 0:
             spawn_unit(entrance_position.x, entrance_position.y)
-            if units_count >= units.size():
+            if units_spawned >= units.size():
                 spawn_is_active = false
 
-    for unit_index in range(0, units_count):
+    for unit_index in range(0, units_spawned):
         var unit : Unit = units[unit_index]
 
         debug_draw.add_text(
@@ -440,19 +445,19 @@ func tick() -> void:
 
     now_tick += 1
 
-    units_exited_count = 0
-    units_dead_count = 0
-    for unit_index in range(0, units_count):
+    units_exited = 0
+    units_dead = 0
+    for unit_index in range(0, units_spawned):
         var unit : Unit = units[unit_index]
         if unit.status == Unit.STATUSES.EXITED:
-            units_exited_count += 1
+            units_exited += 1
         if unit.status == Unit.STATUSES.DEAD:
-            units_dead_count += 1
+            units_dead += 1
 
-    if units_dead_count + units_exited_count == units_max:
+    if units_dead + units_exited == units_max:
         is_ticking = false
 
-        if units_exited_count >= units_goal_count:
+        if units_exited >= units_goal:
             if current_level >= config.levels.size() - 1:
                 print("Game over")
                 unload_level()
@@ -476,20 +481,20 @@ func viewport_to_map_position(pos: Vector2) -> Vector2:
     return pos / game_scale
 
 func spawn_unit(x: int, y: int) -> Unit: 
-    if units_count >= units.size():
+    if units_spawned >= units.size():
         print("Max units reached (%s)" % units.size())
         return null
 
     var unit : Unit = config.unit_prefab.instance()
-    unit.name = "Unit %s" % units_count
+    unit.name = "Unit %s" % units_spawned
     unit.position.x = x
     unit.position.y = y - unit.height / 2
     unit.play("fall")
 
-    units[units_count] = unit
+    units[units_spawned] = unit
     scaler_node.add_child(unit)
 
-    units_count += 1
+    units_spawned += 1
 
     return unit
 
