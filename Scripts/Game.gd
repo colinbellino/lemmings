@@ -46,7 +46,7 @@ export var sound_assign_job : AudioStreamSample
 # Game data
 var now : float
 var now_tick : int
-var is_active : bool
+var is_ticking : bool
 var game_scale : int
 var next_tick_at : float
 var tool_primary : int = TOOL_PAINT_RECT
@@ -75,67 +75,27 @@ var spawn_is_active : bool
 var spawn_rate : int = 50
 
 func _ready() -> void:
-    is_active = true
     now = OS.get_ticks_msec()
-    units.resize(units_max)
-    
-    map_image = map_original_texture.get_data()
-    map_width = map_image.get_width()
-    map_height = map_image.get_height()
-
-    # Extract the map data from the image
-    map_data.resize(map_width * map_height)
-    map_image.lock()
-    for y in range(0, map_height):
-        for x in range(0, map_width):
-            var index := calculate_index(x, y, map_width) 
-            var color := map_image.get_pixel(x, y)
-            var value := PIXEL_EMPTY
-            if color.a > 0:
-                value = PIXEL_SOLID
-            if color.is_equal_approx(exit_color):
-                exit_position = Vector2(x, y)
-                value = PIXEL_EMPTY
-            if color.is_equal_approx(entrance_color):
-                entrance_position = Vector2(x, y)
-                value = PIXEL_EMPTY
-            map_data.set(index, value)
-    map_image.unlock()
-
-    # Prepare the images
-    map_texture = ImageTexture.new()
-    map_texture.create_from_image(map_image, 0)
-    map_sprite.texture = map_texture
-    collision_image = Image.new()
-    collision_image.create(map_width, map_height, false, map_image.get_format())
-    collision_texture = ImageTexture.new()
 
     # Init scale
     game_scale = GAME_SCALE
     scaler_node.scale = Vector2(game_scale, game_scale)
 
-    # Spawn the entrance and exit
-    print("entrance_position: ", entrance_position)
-    entrance_node = entrance_prefab.instance()
-    entrance_node.position = entrance_position
-    map_sprite.add_child(entrance_node)
-    print("exit_position: ", exit_position)
-    exit_node = exit_prefab.instance()
-    exit_node.position = exit_position
-    map_sprite.add_child(exit_node)
-
     set_cursor(CURSOR_DEFAULT)
-    update_map(0, 0, map_width, map_height)
-    
+
     toggle_debug()
     action0_button.connect("pressed", self, "select_tool", [TOOL_DESTROY_RECT])
     action1_button.connect("pressed", self, "select_tool", [TOOL_UNIT_SPAWN])
     action2_button.connect("pressed", self, "select_tool", [TOOL_UNIT_DIG])
 
-    entrance_node.play("opening")
-    yield(entrance_node, "animation_finished")
-    spawn_is_active = true
+    map_texture = ImageTexture.new()
+    collision_image = Image.new()
 
+    # Load and start the level
+    load_level(map_original_texture)
+    is_ticking = true
+    start_level()
+ 
 func _process(delta: float) -> void:
     now += delta * 1000 # Delta is in seconds, now in Milliseconds
 
@@ -144,13 +104,17 @@ func _process(delta: float) -> void:
         
     if Input.is_action_just_released("debug_2"):
         map_sprite.visible = !map_sprite.visible
-
-    if Input.is_action_just_released("ui_select"):
-        update_map(0, 0, map_width, map_height)
+        
+    if Input.is_action_just_released("debug_5"):
+        print("Restarting level")
+        is_ticking = false
+        unload_level()
+        load_level(map_original_texture)
+        is_ticking = true
+        start_level()
 
     if Input.is_action_just_released("ui_down"):
         spawn_rate = clamp(spawn_rate + 10, 10, 100)
-
     if Input.is_action_just_released("ui_up"):
         spawn_rate = clamp(spawn_rate - 10, 10, 100)
 
@@ -208,6 +172,69 @@ func _unhandled_input(event) -> void:
             use_tool(tool_secondary, map_position.x, map_position.y, event.pressed)
         if event.button_index == BUTTON_MIDDLE:
             use_tool(tool_tertiary, map_position.x, map_position.y, event.pressed)
+
+func load_level(texture: Texture) -> void:
+    units.resize(units_max)
+    
+    map_image = texture.get_data()
+    map_width = map_image.get_width()
+    map_height = map_image.get_height()
+
+    # Extract the map data from the image
+    map_data.resize(map_width * map_height)
+    map_image.lock()
+    for y in range(0, map_height):
+        for x in range(0, map_width):
+            var index := calculate_index(x, y, map_width) 
+            var color := map_image.get_pixel(x, y)
+            var value := PIXEL_EMPTY
+            if color.a > 0:
+                value = PIXEL_SOLID
+            if color.is_equal_approx(exit_color):
+                exit_position = Vector2(x, y)
+                value = PIXEL_EMPTY
+            if color.is_equal_approx(entrance_color):
+                entrance_position = Vector2(x, y)
+                value = PIXEL_EMPTY
+            map_data.set(index, value)
+    map_image.unlock()
+
+    # Prepare the images
+    map_texture.create_from_image(map_image, 0)
+    map_sprite.texture = map_texture
+    collision_image.create(map_width, map_height, false, map_image.get_format())
+    collision_texture = ImageTexture.new()
+
+    # Spawn the entrance and exit
+    print("entrance_position: ", entrance_position)
+    entrance_node = entrance_prefab.instance()
+    entrance_node.position = entrance_position
+    map_sprite.add_child(entrance_node)
+    print("exit_position: ", exit_position)
+    exit_node = exit_prefab.instance()
+    exit_node.position = exit_position
+    map_sprite.add_child(exit_node)
+
+    update_map(0, 0, map_width, map_height)
+
+func unload_level() -> void:
+    for unit_index in units_count:
+        var unit : Unit = units[unit_index]
+        unit.queue_free()
+    units_count = 0
+
+    collision_sprite.texture = null
+    map_sprite.texture = null
+    entrance_node.queue_free()
+    exit_node.queue_free()
+
+func start_level() -> void:
+    print(instance_from_id(1415))
+    print_stray_nodes()
+
+    entrance_node.play("opening")
+    yield(entrance_node, "animation_finished")
+    spawn_is_active = true
 
 func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
@@ -281,7 +308,7 @@ func toggle_debug() -> void:
     debug_label.visible = !debug_label.visible
 
 func tick() -> void: 
-    if not is_active:
+    if not is_ticking:
         return
 
     if spawn_is_active:
@@ -413,10 +440,10 @@ func tick() -> void:
     if units_dead_count + units_exited_count == units_max:
         if units_exited_count >= units_goal_count:
             print("victory")
-            is_active = false
+            is_ticking = false
         else:
             print("game over")
-            is_active = false
+            is_ticking = false
 
 func viewport_to_map_position(pos: Vector2) -> Vector2:
     return pos / game_scale

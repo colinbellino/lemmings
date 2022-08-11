@@ -11,7 +11,7 @@ var _texts_count : int = 0
 
 func _ready() -> void:
     _game = get_node("/root/Game")
-    _font = Control.new().get_font("font")
+    _font = self.get_font("font")
     _rects.resize(300)
     _texts.resize(300)
 
