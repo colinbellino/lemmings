@@ -2,15 +2,15 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/map_00.png-d04af1ce49e01b6e1c1c88f21f74572b.stex"
+path="res://.import/map_01.png-bc9ff2fa7b4622588a302c811e61505a.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Art/map_00.png"
-dest_files=[ "res://.import/map_00.png-d04af1ce49e01b6e1c1c88f21f74572b.stex" ]
+source_file="res://Art/Levels/map_01.png"
+dest_files=[ "res://.import/map_01.png-bc9ff2fa7b4622588a302c811e61505a.stex" ]
 
 [params]
 
@@ -31,5 +31,5 @@ process/invert_color=false
 process/normal_map_invert_y=false
 stream=false
 size_limit=0
-detect_3d=false
+detect_3d=true
 svg/scale=1.0

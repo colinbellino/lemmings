@@ -17,7 +17,7 @@ const JOB_DIG_DURATION : int = 145
 const FALL_FATAL_DURATION : int = 50
 
 # Resources & config
-export var map_original_texture : Texture
+export(Array, Texture) var levels : Array
 export var cursor_default_x1 : Texture
 export var cursor_default_x2 : Texture
 export var cursor_default_x4 : Texture
@@ -51,6 +51,7 @@ onready var action2_button : Button = get_node("%Action2")
 onready var audio_player : AudioStreamPlayer = get_node("%AudioPlayer")
 
 # Game data
+var current_level : int
 var now : float
 var now_tick : int
 var is_ticking : bool
@@ -65,7 +66,7 @@ var units : Array = []
 var units_count : int
 var units_exited_count : int
 var units_dead_count : int
-var units_max : int = 100
+var units_max : int = 30
 var units_goal_count : int = 10
 var map_data : PoolIntArray = []
 var map_texture : Texture
@@ -95,7 +96,7 @@ func _ready() -> void:
     collision_image = Image.new()
 
     # Load and start the level
-    load_level(map_original_texture)
+    load_level(levels[current_level])
     is_ticking = true
     start_level()
  
@@ -112,7 +113,7 @@ func _process(delta: float) -> void:
         print("Restarting level")
         is_ticking = false
         unload_level()
-        load_level(map_original_texture)
+        load_level(levels[current_level])
         is_ticking = true
         start_level()
 
@@ -183,6 +184,9 @@ func load_level(texture: Texture) -> void:
     map_width = map_image.get_width()
     map_height = map_image.get_height()
 
+    entrance_position = Vector2.ZERO
+    exit_position = Vector2.ZERO
+
     # Extract the map data from the image
     map_data.resize(map_width * map_height)
     map_image.lock()
@@ -201,6 +205,15 @@ func load_level(texture: Texture) -> void:
                 value = PIXEL_EMPTY
             map_data.set(index, value)
     map_image.unlock()
+
+    if entrance_position == Vector2.ZERO:
+        printerr("Could not find entrance position.")
+        quit_game()
+        return
+    if exit_position == Vector2.ZERO:
+        printerr("Could not find exit position.")
+        quit_game()
+        return
 
     # Prepare the images
     map_texture.create_from_image(map_image, 0)
@@ -225,6 +238,8 @@ func unload_level() -> void:
         var unit : Unit = units[unit_index]
         unit.queue_free()
     units_count = 0
+    units_exited_count = 0
+    units_dead_count = 0
 
     collision_sprite.texture = null
     map_sprite.texture = null
@@ -443,12 +458,27 @@ func tick() -> void:
             units_dead_count += 1
 
     if units_dead_count + units_exited_count == units_max:
+        is_ticking = false
+
         if units_exited_count >= units_goal_count:
-            print("victory")
-            is_ticking = false
+            if current_level >= levels.size() - 1:
+                print("Game over")
+                unload_level()
+            else:
+                print("Loading next level")
+                yield(get_tree().create_timer(2), "timeout")
+                unload_level()
+                current_level += 1
+                load_level(levels[current_level])
+                is_ticking = true
+                start_level()
         else:
-            print("game over")
-            is_ticking = false
+            print("Restarting current level")
+            yield(get_tree().create_timer(2), "timeout")
+            unload_level()
+            load_level(levels[current_level])
+            is_ticking = true
+            start_level()
 
 func viewport_to_map_position(pos: Vector2) -> Vector2:
     return pos / game_scale
