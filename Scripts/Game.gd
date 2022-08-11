@@ -99,6 +99,15 @@ func _process(delta: float) -> void:
         load_level(config.levels[current_level])
         is_ticking = true
         start_level()
+        
+    if Input.is_action_just_released("debug_12"):
+        print("Restarting level")
+        is_ticking = false
+        unload_level()
+        current_level += 1
+        load_level(config.levels[current_level])
+        is_ticking = true
+        start_level()
 
     if Input.is_action_just_released("ui_down"):
         spawn_rate = clamp(spawn_rate + 10, 10, 100)
@@ -117,23 +126,21 @@ func _process(delta: float) -> void:
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
-    var map_position = viewport_to_map_position(get_local_mouse_position())
-
-    if Input.is_mouse_button_pressed(BUTTON_LEFT):
-        use_tool(tool_primary, map_position.x, map_position.y, true)
-    elif Input.is_mouse_button_pressed(BUTTON_RIGHT):
-        use_tool(tool_secondary, map_position.x, map_position.y, true)
-    elif Input.is_mouse_button_pressed(BUTTON_MIDDLE):
-        use_tool(tool_tertiary, map_position.x, map_position.y, true)
+    var mouse_map_position = viewport_to_map_position(get_local_mouse_position())
 
     # Update cursor
-    var mouse_position := get_viewport().get_mouse_position()
-    var mouse_map_position := viewport_to_map_position(mouse_position)
     var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
     if unit_index > -1:
         set_cursor(CURSOR_BORDER)
     else:
         set_cursor(CURSOR_DEFAULT)
+
+    if Input.is_mouse_button_pressed(BUTTON_LEFT):
+        use_tool(tool_primary, mouse_map_position.x, mouse_map_position.y, true)
+    elif Input.is_mouse_button_pressed(BUTTON_RIGHT):
+        use_tool(tool_secondary, mouse_map_position.x, mouse_map_position.y, true)
+    elif Input.is_mouse_button_pressed(BUTTON_MIDDLE):
+        use_tool(tool_tertiary, mouse_map_position.x, mouse_map_position.y, true)
 
     debug_label.set_text(JSON.print({ 
         "FPS": Performance.get_monitor(Performance.TIME_FPS),
@@ -237,6 +244,8 @@ func unload_level() -> void:
 
 func start_level() -> void:
     print_stray_nodes()
+    
+    spawn_is_active = false
 
     audio_player_music.stream = config.musics[0]
     audio_player_music.play()
