@@ -1,4 +1,4 @@
-[gd_scene load_steps=13 format=2]
+[gd_scene load_steps=15 format=2]
 
 [ext_resource path="res://Scripts/Game.gd" type="Script" id=1]
 [ext_resource path="res://Scripts/DebugDraw.gd" type="Script" id=2]
@@ -12,6 +12,8 @@
 [ext_resource path="res://Art/cursor_default_x1.png" type="Texture" id=10]
 [ext_resource path="res://Art/cursor_default_x2.png" type="Texture" id=11]
 [ext_resource path="res://Art/cursor_border_x1.png" type="Texture" id=12]
+[ext_resource path="res://Audio/YIPPEE.WAV" type="AudioStream" id=13]
+[ext_resource path="res://Audio/SPLAT.WAV" type="AudioStream" id=14]
 
 [node name="Game" type="Node2D"]
 script = ExtResource( 1 )
@@ -27,6 +29,8 @@ exit_prefab = ExtResource( 7 )
 exit_color = Color( 0.843137, 0.482353, 0.729412, 1 )
 entrance_prefab = ExtResource( 8 )
 entrance_color = Color( 0.388235, 0.607843, 1, 1 )
+sound_yippee = ExtResource( 13 )
+sound_splat = ExtResource( 14 )
 
 [node name="Debug" type="CanvasLayer" parent="."]
 layer = 8
@@ -49,6 +53,7 @@ custom_colors/font_color = Color( 1, 1, 1, 1 )
 text = "DEBUG"
 
 [node name="HUD" type="CanvasLayer" parent="."]
+visible = false
 
 [node name="Action0" type="Button" parent="HUD"]
 unique_name_in_owner = true
@@ -94,3 +99,7 @@ centered = false
 unique_name_in_owner = true
 modulate = Color( 1, 1, 1, 0.427451 )
 centered = false
+
+[node name="AudioPlayer" type="AudioStreamPlayer" parent="."]
+unique_name_in_owner = true
+bus = "Sounds"

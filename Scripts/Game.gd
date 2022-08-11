@@ -6,13 +6,13 @@ const TICK_SPEED : int = 50
 const TIME_SCALE : int = 1
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
-const PIXEL_EXIT : int = 1 << 2
+const PIXEL_PAINT : int = 1 << 2
 const TOOL_DESTROY_RECT : int = 0
 const TOOL_UNIT_SPAWN : int = 1
+const TOOL_PAINT_RECT : int = 3
 const TOOL_UNIT_DIG : int = 2
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
-
 const JOB_DIG_DURATION : int = 145
 const FALL_FATAL_DURATION : int = 50
 
@@ -20,10 +20,11 @@ onready var scaler_node : Node2D = get_node("%Scaler")
 onready var map_sprite : Sprite = get_node("%Map")
 onready var collision_sprite : Sprite = get_node("%Collision")
 onready var debug_label : Label = get_node("%DebugLabel")
-onready var debug_draw := get_node("%DebugCanvas")
-onready var action0_button := get_node("%Action0")
-onready var action1_button := get_node("%Action1")
-onready var action2_button := get_node("%Action2")
+onready var debug_draw : Control = get_node("%DebugCanvas")
+onready var action0_button : Button = get_node("%Action0")
+onready var action1_button : Button = get_node("%Action1")
+onready var action2_button : Button = get_node("%Action2")
+onready var audio_player : AudioStreamPlayer = get_node("%AudioPlayer")
 
 export var map_original_texture : Texture
 export var cursor_default_x1 : Texture
@@ -38,6 +39,8 @@ export var exit_color: Color
 export var entrance_prefab: PackedScene
 export var entrance_color: Color
 export var background_color : Color = Color(0, 0, 0, 0)
+export var sound_yippee : AudioStreamSample
+export var sound_splat : AudioStreamSample
 
 # Game data
 var now : float
@@ -45,8 +48,9 @@ var now_tick : int
 var is_active : bool
 var game_scale : int
 var next_tick_at : float
-var tool_primary : int = TOOL_UNIT_DIG
+var tool_primary : int = TOOL_PAINT_RECT
 var tool_secondary : int = TOOL_DESTROY_RECT
+var tool_tertiary : int = TOOL_UNIT_DIG
 # Level data
 var units : Array = []
 var units_count : int
@@ -89,7 +93,7 @@ func _ready() -> void:
                 value = PIXEL_SOLID
             if color.is_equal_approx(exit_color):
                 exit_position = Vector2(x, y)
-                value = PIXEL_EMPTY & PIXEL_EXIT
+                value = PIXEL_EMPTY
             if color.is_equal_approx(entrance_color):
                 entrance_position = Vector2(x, y)
                 value = PIXEL_EMPTY
@@ -160,6 +164,15 @@ func _process(delta: float) -> void:
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
+    var map_position = viewport_to_map_position(get_local_mouse_position())
+
+    if Input.is_mouse_button_pressed(BUTTON_LEFT):
+        use_tool(tool_primary, map_position.x, map_position.y)
+    if Input.is_mouse_button_pressed(BUTTON_RIGHT):
+        use_tool(tool_secondary, map_position.x, map_position.y)
+    if Input.is_mouse_button_pressed(BUTTON_MIDDLE):
+        use_tool(tool_tertiary, map_position.x, map_position.y)
+
     # Update cursor
     var mouse_position := get_viewport().get_mouse_position()
     var mouse_map_position := viewport_to_map_position(mouse_position)
@@ -182,17 +195,18 @@ func _process(delta: float) -> void:
         next_tick_at = now + TICK_SPEED
 
 func _unhandled_input(event) -> void:
-    if event is InputEventMouseMotion:
-        pass
-    elif event is InputEventMouseButton:
-        if event.button_index == BUTTON_LEFT:
-            if not event.pressed:
-                var map_position = viewport_to_map_position(event.position)
-                use_tool(tool_primary, map_position.x, map_position.y)
-        if event.button_index == BUTTON_RIGHT:
-            if not event.pressed:
-                var map_position = viewport_to_map_position(event.position)
-                use_tool(tool_secondary, map_position.x, map_position.y)
+    pass
+    # if event is InputEventMouseMotion:
+    #     pass
+    # elif event is InputEventMouseButton:
+    #     if event.button_index == BUTTON_LEFT:
+    #         if event:
+    #             var map_position = viewport_to_map_position(event.position)
+    #             use_tool(tool_primary, map_position.x, map_position.y)
+    #     if event.button_index == BUTTON_RIGHT:
+    #         if event.pressed:
+    #             var map_position = viewport_to_map_position(event.position)
+    #             use_tool(tool_secondary, map_position.x, map_position.y)
 
 func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
@@ -235,6 +249,9 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
         TOOL_DESTROY_RECT:
             var size = 20
             destroy_rect(x - size / 2, y - size / 2, size, size)
+        TOOL_PAINT_RECT:
+            var size = 20
+            paint_rect(x - size / 2, y - size / 2, size, size)
         TOOL_UNIT_SPAWN:
             if not has_flag(x, y, PIXEL_SOLID):
                 var unit := spawn_unit(x, y)
@@ -285,13 +302,16 @@ func tick() -> void:
         var ground_check_pos_y : int = unit.position.y + unit.height / 2
 
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
-            print("%s: OOB" % unit.name)
-            unit.status = Unit.STATUSES.DEAD
-            continue
+            # print("%s: OOB" % unit.name)
+            unit.state = Unit.STATES.DEAD
+            unit.state_entered_at = now_tick
 
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
             unit.status = Unit.STATUSES.EXITED
+            audio_player.stream = sound_yippee
+            audio_player.pitch_scale = rand_range(0.9, 1.2)
+            audio_player.play()
             continue
 
         debug_draw.add_rect(unit.get_bounds(), Color.green)
@@ -365,6 +385,9 @@ func tick() -> void:
             Unit.STATES.DEAD:
                 unit.status = Unit.STATUSES.DEAD
                 unit.play("dead_fall")
+                audio_player.stream = sound_splat
+                audio_player.pitch_scale = rand_range(0.9, 1.2)
+                audio_player.play()
                 
         unit.position = destination
         
@@ -429,6 +452,25 @@ func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void
         map_data[index] = PIXEL_EMPTY
 
     update_map(origin_x, origin_y, width, height)
+    
+func paint_rect(origin_x: int, origin_y: int, width: int, height: int) -> void:
+    var pixels_to_draw : PoolIntArray = []
+
+    for offset_x in range(0, width):
+        for offset_y in range(0, height):
+            var pos_x = origin_x + offset_x
+            var pos_y = origin_y + offset_y
+            if is_in_bounds(pos_x, pos_y):
+                var index := calculate_index(pos_x, pos_y, map_width)
+                pixels_to_draw.append(index)
+
+    if pixels_to_draw.size() <= 0:
+        return
+
+    for index in pixels_to_draw:
+        map_data[index] = PIXEL_SOLID | PIXEL_PAINT
+
+    update_map(origin_x, origin_y, width, height)
 
 func has_flag(x: int, y: int, flag: int) -> bool: 
     if not is_in_bounds(x, y):
@@ -437,7 +479,7 @@ func has_flag(x: int, y: int, flag: int) -> bool:
     return map_data[index] & flag != 0
 
 func is_in_bounds(x: int, y: int) -> bool:
-    return x > 0 && x < map_width && y > 0 && y < map_height
+    return x >= 0 && x < map_width && y >= 0 && y < map_height
 
 func quit_game() -> void:
     print("Quitting game...")
@@ -459,12 +501,17 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
             var pixel := map_data[index]
             var pos_x := index % map_width
             var pos_y := index / map_width
-            var color := Color.transparent
+            
+            var collision_color := Color.transparent
+            if pixel != PIXEL_EMPTY:
+                collision_color = Color.red
+            collision_image.set_pixel(pos_x, pos_y, collision_color)
+
             if pixel == PIXEL_EMPTY:
                 map_image.set_pixel(pos_x, pos_y, Color.transparent)
-            else:
-                color = Color.red
-            collision_image.set_pixel(pos_x, pos_y, color)
+            elif has_flag(pos_x, pos_y, PIXEL_PAINT):
+                map_image.set_pixel(pos_x, pos_y, Color.blue)
+                    
             count += 1
     collision_image.unlock()
     map_image.unlock()

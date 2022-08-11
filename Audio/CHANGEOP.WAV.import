@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/CHANGEOP.WAV-4c393ab7df96636977e05adb751b0959.sample"
+
+[deps]
+
+source_file="res://Audio/CHANGEOP.WAV"
+dest_files=[ "res://.import/CHANGEOP.WAV-4c393ab7df96636977e05adb751b0959.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0

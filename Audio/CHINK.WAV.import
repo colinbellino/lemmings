@@ -1,0 +1,23 @@
+[remap]
+
+importer="wav"
+type="AudioStreamSample"
+path="res://.import/CHINK.WAV-b167a183ddf63a2e30cc3b9c6de53c6e.sample"
+
+[deps]
+
+source_file="res://Audio/CHINK.WAV"
+dest_files=[ "res://.import/CHINK.WAV-b167a183ddf63a2e30cc3b9c6de53c6e.sample" ]
+
+[params]
+
+force/8_bit=false
+force/mono=false
+force/max_rate=false
+force/max_rate_hz=44100
+edit/trim=false
+edit/normalize=false
+edit/loop_mode=0
+edit/loop_begin=0
+edit/loop_end=-1
+compress/mode=0
