@@ -52,6 +52,7 @@ var next_tick_at : float
 var tool_primary : int = TOOL_PAINT_RECT
 var tool_secondary : int = TOOL_DESTROY_RECT
 var tool_tertiary : int = TOOL_UNIT_DIG
+var mouse_button_pressed : int
 # Level data
 var units : Array = []
 var units_count : int
@@ -168,11 +169,11 @@ func _process(delta: float) -> void:
     var map_position = viewport_to_map_position(get_local_mouse_position())
 
     if Input.is_mouse_button_pressed(BUTTON_LEFT):
-        use_tool(tool_primary, map_position.x, map_position.y)
-    if Input.is_mouse_button_pressed(BUTTON_RIGHT):
-        use_tool(tool_secondary, map_position.x, map_position.y)
-    if Input.is_mouse_button_pressed(BUTTON_MIDDLE):
-        use_tool(tool_tertiary, map_position.x, map_position.y)
+        use_tool(tool_primary, map_position.x, map_position.y, true)
+    elif Input.is_mouse_button_pressed(BUTTON_RIGHT):
+        use_tool(tool_secondary, map_position.x, map_position.y, true)
+    elif Input.is_mouse_button_pressed(BUTTON_MIDDLE):
+        use_tool(tool_tertiary, map_position.x, map_position.y, true)
 
     # Update cursor
     var mouse_position := get_viewport().get_mouse_position()
@@ -196,18 +197,17 @@ func _process(delta: float) -> void:
         next_tick_at = now + TICK_SPEED
 
 func _unhandled_input(event) -> void:
-    pass
-    # if event is InputEventMouseMotion:
-    #     pass
-    # elif event is InputEventMouseButton:
-    #     if event.button_index == BUTTON_LEFT:
-    #         if event:
-    #             var map_position = viewport_to_map_position(event.position)
-    #             use_tool(tool_primary, map_position.x, map_position.y)
-    #     if event.button_index == BUTTON_RIGHT:
-    #         if event.pressed:
-    #             var map_position = viewport_to_map_position(event.position)
-    #             use_tool(tool_secondary, map_position.x, map_position.y)
+    if event is InputEventMouseMotion:
+        pass
+
+    if event is InputEventMouseButton:
+        var map_position = viewport_to_map_position(event.position)
+        if event.button_index == BUTTON_LEFT:
+            use_tool(tool_primary, map_position.x, map_position.y, event.pressed)
+        if event.button_index == BUTTON_RIGHT:
+            use_tool(tool_secondary, map_position.x, map_position.y, event.pressed)
+        if event.button_index == BUTTON_MIDDLE:
+            use_tool(tool_tertiary, map_position.x, map_position.y, event.pressed)
 
 func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
@@ -242,7 +242,7 @@ func set_cursor(cursor_id: int) -> void:
 
     Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
 
-func use_tool(tool_id: int, x: int, y: int) -> void: 
+func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     if not is_in_bounds(x, y):
         return
 
@@ -254,21 +254,23 @@ func use_tool(tool_id: int, x: int, y: int) -> void:
             var size = 20
             paint_rect(x - size / 2, y - size / 2, size, size)
         TOOL_UNIT_SPAWN:
-            if not has_flag(x, y, PIXEL_SOLID):
-                var unit := spawn_unit(x, y)
-                print("%s spawned" % unit.name)
+            if not pressed:
+                if not has_flag(x, y, PIXEL_SOLID):
+                    var unit := spawn_unit(x, y)
+                    print("%s spawned" % unit.name)
         TOOL_UNIT_DIG:
-            var unit_index := get_unit_at(x, y)
-            if unit_index > -1:
-                var unit : Unit = units[unit_index]
-                if unit.job == Unit.JOBS.DIG_VERTICAL:
-                    unit.job = Unit.JOBS.NONE
-                else: 
-                    unit.job = Unit.JOBS.DIG_VERTICAL
-                    unit.job_duration = JOB_DIG_DURATION
-                    audio_player.stream = sound_assign_job
-                    audio_player.play()
-                unit.job_started_at = now_tick
+            if not pressed:
+                var unit_index := get_unit_at(x, y)
+                if unit_index > -1:
+                    var unit : Unit = units[unit_index]
+                    if unit.job == Unit.JOBS.DIG_VERTICAL:
+                        unit.job = Unit.JOBS.NONE
+                    else: 
+                        unit.job = Unit.JOBS.DIG_VERTICAL
+                        unit.job_duration = JOB_DIG_DURATION
+                        audio_player.stream = sound_assign_job
+                        audio_player.play()
+                    unit.job_started_at = now_tick
 
 func select_tool(tool_id: int) -> void: 
     tool_primary = tool_id
