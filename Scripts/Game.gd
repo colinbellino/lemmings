@@ -291,10 +291,10 @@ func tick() -> void:
                         debug_draw.add_rect(unit_rect, Color.red)
                         destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
 
-                        var is_done := tick_count >= unit.job_started_at + unit.job_duration
-                        if not is_done:
+                        var is_not_done := tick_count < unit.job_started_at + unit.job_duration
+                        if is_not_done:
                             destination.y += 1
-                _:
+                Unit.JOB_NONE:
                     var wall_check_pos_x : int = unit.position.x + unit.direction
                     var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
                     var destination_offset_y := 0
@@ -314,6 +314,12 @@ func tick() -> void:
                         unit.direction *= -1
                         unit.flip_h = unit.direction == -1
                     else:
+                        for offset_y in range(1, unit.climb_step):
+                            var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
+                            debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
+                            if not has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXEL_SOLID):
+                                destination_offset_y = offset_y
+
                         # Walk forward
                         destination.y += destination_offset_y
                         destination.x += unit.direction
