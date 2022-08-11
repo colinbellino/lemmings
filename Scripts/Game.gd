@@ -4,7 +4,6 @@ class_name Game
 const GAME_SCALE : int = 6
 const TICK_SPEED : int = 50
 const TIME_SCALE : int = 1
-const UNITS_MAX : int = 100
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
 const PIXEL_EXIT : int = 1 << 2
@@ -37,14 +36,21 @@ export var entrance_prefab: PackedScene
 export var entrance_color: Color
 export var background_color : Color = Color(0, 0, 0, 0)
 
+# Game data
 var now : float
+var is_active : bool
 var game_scale : int
 var tick_count : int
 var next_tick_at : float
 var tool_primary : int = TOOL_JOB_DIG
 var tool_secondary : int = TOOL_SPAWN_UNIT
+# Level data
 var units : Array = []
 var units_count : int
+var units_exited_count : int
+var units_dead_count : int
+var units_max : int = 100
+var units_goal_count : int = 10
 var map_data : PoolIntArray = []
 var map_texture : Texture
 var map_image : Image
@@ -56,14 +62,13 @@ var entrance_position : Vector2
 var entrance_node : Node
 var exit_position : Vector2
 var exit_node : Node
-var exited_count : int
-var goal_count : int = 10
+var spawn_is_active : bool
 var spawn_rate : int = 50
-var spawn_active : bool
 
 func _ready() -> void:
+    is_active = true
     now = OS.get_ticks_msec()
-    units.resize(UNITS_MAX)
+    units.resize(units_max)
     
     map_image = map_original_texture.get_data()
     map_width = map_image.get_width()
@@ -120,7 +125,7 @@ func _ready() -> void:
 
     entrance_node.play("opening")
     yield(entrance_node, "animation_finished")
-    spawn_active = true
+    spawn_is_active = true
 
 func _process(delta: float) -> void:
     now += delta * 1000 # Delta is in seconds, now in Milliseconds
@@ -166,7 +171,7 @@ func _process(delta: float) -> void:
         "Scale": game_scale,
         "Units": "%s / %s" % [units_count, units.size()],
         "Spawn rate": spawn_rate,
-        "Goal": "%s / %s" % [exited_count, goal_count],
+        "Goal": "%s / %s" % [units_exited_count, units_goal_count],
     }, "\t"))
 
     if now >= next_tick_at:
@@ -251,16 +256,19 @@ func toggle_debug() -> void:
     debug_label.visible = !debug_label.visible
 
 func tick() -> void: 
-    if spawn_active:
+    if not is_active:
+        return
+
+    if spawn_is_active:
         if tick_count % spawn_rate == 0:
             spawn_unit(entrance_position.x, entrance_position.y)
             if units_count >= units.size():
-                spawn_active = false
+                spawn_is_active = false
 
     for unit_index in range(0, units_count):
         var unit : Unit = units[unit_index]
 
-        if unit.exited:
+        if unit.status != Unit.STATUS_ACTIVE:
             continue
 
         var destination := unit.position
@@ -269,12 +277,12 @@ func tick() -> void:
 
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             print("%s: OOB" % unit.name)
+            unit.status = Unit.STATUS_DEAD
             continue
 
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
-            unit.exited = true
-            exited_count += 1
+            unit.status = Unit.STATUS_EXITED
             continue
 
         debug_draw.add_rect(unit.get_bounds(), Color.green)
@@ -336,6 +344,23 @@ func tick() -> void:
             unit.job_id = Unit.JOB_NONE
 
     tick_count += 1
+
+    units_exited_count = 0
+    units_dead_count = 0
+    for unit_index in range(0, units_count):
+        var unit : Unit = units[unit_index]
+        if unit.status == Unit.STATUS_EXITED:
+            units_exited_count += 1
+        if unit.status == Unit.STATUS_DEAD:
+            units_dead_count += 1
+
+    if units_dead_count + units_exited_count == units_max:
+        if units_exited_count >= units_goal_count:
+            print("victory")
+            is_active = false
+        else:
+            print("game over")
+            is_active = false
 
 func viewport_to_map_position(pos: Vector2) -> Vector2:
     return pos / game_scale
@@ -401,6 +426,8 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     for pixel_x in range(x, x + width):
         for pixel_y in range(y, y + height):
             var index := pixel_y * map_width + pixel_x
+            if index < 0 || index >= map_data.size():
+                continue
             var pixel := map_data[index]
             var pos_x := index % map_width
             var pos_y := index / map_width
