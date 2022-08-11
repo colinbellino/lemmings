@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=2]
+[gd_scene load_steps=17 format=2]
 
 [ext_resource path="res://Scripts/Game.gd" type="Script" id=1]
 [ext_resource path="res://Scripts/DebugDraw.gd" type="Script" id=2]
@@ -15,6 +15,7 @@
 [ext_resource path="res://Audio/YIPPEE.WAV" type="AudioStream" id=13]
 [ext_resource path="res://Audio/SPLAT.WAV" type="AudioStream" id=14]
 [ext_resource path="res://Audio/MOUSEPRE.WAV" type="AudioStream" id=15]
+[ext_resource path="res://Audio/LETSGO.WAV" type="AudioStream" id=16]
 
 [node name="Game" type="Node2D"]
 script = ExtResource( 1 )
@@ -33,6 +34,7 @@ entrance_color = Color( 0.388235, 0.607843, 1, 1 )
 sound_yippee = ExtResource( 13 )
 sound_splat = ExtResource( 14 )
 sound_assign_job = ExtResource( 15 )
+sound_start = ExtResource( 16 )
 
 [node name="Debug" type="CanvasLayer" parent="."]
 layer = 8

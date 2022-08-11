@@ -42,6 +42,7 @@ export var background_color : Color = Color(0, 0, 0, 0)
 export var sound_yippee : AudioStreamSample
 export var sound_splat : AudioStreamSample
 export var sound_assign_job : AudioStreamSample
+export var sound_start : AudioStreamSample
 
 # Game data
 var now : float
@@ -229,12 +230,14 @@ func unload_level() -> void:
     exit_node.queue_free()
 
 func start_level() -> void:
-    print(instance_from_id(1415))
     print_stray_nodes()
 
     entrance_node.play("opening")
     yield(entrance_node, "animation_finished")
     spawn_is_active = true
+
+    audio_player.stream = sound_start
+    audio_player.play()
 
 func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
