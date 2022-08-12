@@ -17,7 +17,8 @@ const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
 const JOB_DIG_DURATION : int = 145
 const JOB_FLOAT_DELAY : int = 10
-const FALL_FATAL_DURATION : int = 50
+const FALL_DURATION_FATAL : int = 48
+const FALL_DURATION_FLOAT : int = 25
 
 # Scene stuff
 var map_image : Image
@@ -414,16 +415,15 @@ func tick() -> void:
 
         match unit.state:
             Unit.STATES.FALLING:
-                var is_fatal_fall := now_tick >= unit.state_entered_at + FALL_FATAL_DURATION
                 if is_grounded:
-                    if is_fatal_fall:
+                    if now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
                         unit.state = Unit.STATES.DEAD
                         unit.state_entered_at = now_tick
                     else:
                         unit.state = Unit.STATES.WALKING
                         unit.state_entered_at = now_tick
                 else:
-                    if unit.has_job(Unit.JOBS.FLOAT):
+                    if unit.has_job(Unit.JOBS.FLOAT) && now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
                         unit.state = Unit.STATES.FLOATING
                         unit.state_entered_at = now_tick
                     else:
