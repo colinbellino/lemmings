@@ -27,40 +27,61 @@ custom_colors/font_color = Color( 1, 1, 1, 1 )
 text = "DEBUG"
 
 [node name="HUD" type="CanvasLayer" parent="."]
-visible = false
 
 [node name="Action0" type="Button" parent="HUD"]
 unique_name_in_owner = true
-anchor_left = 1.0
-anchor_right = 1.0
-margin_left = -464.0
-margin_top = 64.0
-margin_right = -364.0
-margin_bottom = 84.0
+anchor_top = 1.0
+anchor_bottom = 1.0
+margin_left = 40.0
+margin_top = -130.0
+margin_right = 120.0
+margin_bottom = -110.0
 rect_scale = Vector2( 4, 4 )
-text = "Bomb square"
+text = "DestroyR"
 
 [node name="Action1" type="Button" parent="HUD"]
 unique_name_in_owner = true
 anchor_left = 1.0
 anchor_right = 1.0
-margin_left = -464.0
-margin_top = 192.0
-margin_right = -364.0
-margin_bottom = 212.0
+margin_left = -1520.0
+margin_top = 950.0
+margin_right = -1440.0
+margin_bottom = 970.0
 rect_scale = Vector2( 4, 4 )
-text = "Spawn unit"
+text = "Spawn"
 
 [node name="Action2" type="Button" parent="HUD"]
 unique_name_in_owner = true
 anchor_left = 1.0
 anchor_right = 1.0
-margin_left = -464.0
-margin_top = 320.0
-margin_right = -364.0
-margin_bottom = 340.0
+margin_left = -1160.0
+margin_top = 950.0
+margin_right = -1080.0
+margin_bottom = 970.0
 rect_scale = Vector2( 4, 4 )
-text = "Job: dig"
+text = "DigV"
+
+[node name="Action3" type="Button" parent="HUD"]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -800.0
+margin_top = 952.0
+margin_right = -720.0
+margin_bottom = 972.0
+rect_scale = Vector2( 4, 4 )
+text = "DigH"
+
+[node name="Action4" type="Button" parent="HUD"]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_right = 1.0
+margin_left = -450.0
+margin_top = 950.0
+margin_right = -370.0
+margin_bottom = 970.0
+rect_scale = Vector2( 4, 4 )
+text = "Float"
 
 [node name="Scaler" type="Node2D" parent="."]
 unique_name_in_owner = true

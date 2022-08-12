@@ -1,4 +1,4 @@
-[gd_scene load_steps=64 format=2]
+[gd_scene load_steps=72 format=2]
 
 [ext_resource path="res://Scripts/Unit.gd" type="Script" id=2]
 [ext_resource path="res://Art/unit.png" type="Texture" id=3]
@@ -211,6 +211,38 @@ region = Rect2( 32, 16, 16, 16 )
 atlas = ExtResource( 3 )
 region = Rect2( 48, 16, 16, 16 )
 
+[sub_resource type="AtlasTexture" id=83]
+atlas = ExtResource( 3 )
+region = Rect2( 0, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=84]
+atlas = ExtResource( 3 )
+region = Rect2( 16, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=85]
+atlas = ExtResource( 3 )
+region = Rect2( 32, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=86]
+atlas = ExtResource( 3 )
+region = Rect2( 48, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=87]
+atlas = ExtResource( 3 )
+region = Rect2( 64, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=88]
+atlas = ExtResource( 3 )
+region = Rect2( 80, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=89]
+atlas = ExtResource( 3 )
+region = Rect2( 96, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=90]
+atlas = ExtResource( 3 )
+region = Rect2( 112, 128, 16, 16 )
+
 [sub_resource type="AtlasTexture" id=51]
 atlas = ExtResource( 3 )
 region = Rect2( 0, 0, 16, 16 )
@@ -270,6 +302,11 @@ animations = [ {
 "name": "fall",
 "speed": 10.0
 }, {
+"frames": [ SubResource( 83 ), SubResource( 84 ), SubResource( 85 ), SubResource( 86 ), SubResource( 87 ), SubResource( 88 ), SubResource( 89 ), SubResource( 90 ) ],
+"loop": false,
+"name": "float",
+"speed": 10.0
+}, {
 "frames": [ SubResource( 51 ), SubResource( 52 ), SubResource( 53 ), SubResource( 54 ), SubResource( 55 ), SubResource( 56 ), SubResource( 57 ), SubResource( 58 ) ],
 "loop": true,
 "name": "walk",
@@ -279,8 +316,8 @@ animations = [ {
 [node name="Unit" type="AnimatedSprite"]
 z_index = 1
 frames = SubResource( 10 )
-animation = "dead_fall"
-frame = 15
+animation = "float"
+frame = 7
 playing = true
 offset = Vector2( 0, -2 )
 script = ExtResource( 2 )
