@@ -1,13 +1,19 @@
-[gd_resource type="Resource" load_steps=4 format=2]
+[gd_resource type="Resource" load_steps=6 format=2]
 
 [ext_resource path="res://Scripts/Level.gd" type="Script" id=1]
 [ext_resource path="res://Art/Levels/map_01.png" type="Texture" id=2]
 [ext_resource path="res://Audio/Musics/06 Only Floaters Can Survive This.mp3" type="AudioStream" id=3]
+[ext_resource path="res://Prefabs/Exit_01.tscn" type="PackedScene" id=4]
+[ext_resource path="res://Prefabs/Entrance_00.tscn" type="PackedScene" id=5]
 
 [resource]
 script = ExtResource( 1 )
 texture = ExtResource( 2 )
 music = ExtResource( 3 )
+entrance = ExtResource( 5 )
+exit = ExtResource( 4 )
+camera_x = 75
+camera_y = 0
 units_max = 20
 units_goal = 20
 spawn_rate = 70

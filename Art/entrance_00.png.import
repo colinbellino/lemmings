@@ -2,19 +2,19 @@
 
 importer="texture"
 type="StreamTexture"
-path="res://.import/map_02.png-91164a218b93328227c4e16bd41f0351.stex"
+path="res://.import/entrance_00.png-31b0717e4eaca24ee52c5abe8d9b9372.stex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://Art/Levels/map_02.png"
-dest_files=[ "res://.import/map_02.png-91164a218b93328227c4e16bd41f0351.stex" ]
+source_file="res://Art/entrance_00.png"
+dest_files=[ "res://.import/entrance_00.png-31b0717e4eaca24ee52c5abe8d9b9372.stex" ]
 
 [params]
 
-compress/mode=3
+compress/mode=0
 compress/lossy_quality=0.7
 compress/hdr_mode=0
 compress/bptc_ldr=0

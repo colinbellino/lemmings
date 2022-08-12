@@ -1,13 +1,11 @@
-[gd_resource type="Resource" load_steps=20 format=2]
+[gd_resource type="Resource" load_steps=16 format=2]
 
 [ext_resource path="res://Scripts/GameConfig.gd" type="Script" id=1]
-[ext_resource path="res://Levels/level_0.tres" type="Resource" id=2]
-[ext_resource path="res://Levels/level_1.tres" type="Resource" id=3]
+[ext_resource path="res://Levels/level_00.tres" type="Resource" id=2]
+[ext_resource path="res://Levels/level_01.tres" type="Resource" id=3]
 [ext_resource path="res://Prefabs/Unit.tscn" type="PackedScene" id=4]
 [ext_resource path="res://Art/cursor_default_x4.png" type="Texture" id=5]
 [ext_resource path="res://Art/cursor_border_x4.png" type="Texture" id=6]
-[ext_resource path="res://Prefabs/Exit00.tscn" type="PackedScene" id=7]
-[ext_resource path="res://Prefabs/Entrance.tscn" type="PackedScene" id=8]
 [ext_resource path="res://Art/cursor_border_x2.png" type="Texture" id=9]
 [ext_resource path="res://Art/cursor_default_x1.png" type="Texture" id=10]
 [ext_resource path="res://Art/cursor_default_x2.png" type="Texture" id=11]
@@ -17,8 +15,6 @@
 [ext_resource path="res://Audio/Sounds/MOUSEPRE.WAV" type="AudioStream" id=15]
 [ext_resource path="res://Audio/Sounds/LETSGO.WAV" type="AudioStream" id=16]
 [ext_resource path="res://Audio/Sounds/DOOR.WAV" type="AudioStream" id=18]
-[ext_resource path="res://Audio/Musics/05 Just Dig!.mp3" type="AudioStream" id=19]
-[ext_resource path="res://Audio/Musics/06 Only Floaters Can Survive This.mp3" type="AudioStream" id=20]
 
 [resource]
 script = ExtResource( 1 )
@@ -30,9 +26,7 @@ cursor_border_x1 = ExtResource( 12 )
 cursor_border_x2 = ExtResource( 9 )
 cursor_border_x4 = ExtResource( 6 )
 unit_prefab = ExtResource( 4 )
-exit_prefab = ExtResource( 7 )
 exit_color = Color( 0.843137, 0.482353, 0.729412, 1 )
-entrance_prefab = ExtResource( 8 )
 entrance_color = Color( 0.388235, 0.607843, 1, 1 )
 background_color = Color( 0, 0, 0, 0 )
 sound_start = ExtResource( 16 )
@@ -40,4 +34,3 @@ sound_door_open = ExtResource( 18 )
 sound_yippee = ExtResource( 13 )
 sound_splat = ExtResource( 14 )
 sound_assign_job = ExtResource( 15 )
-musics = [ ExtResource( 19 ), ExtResource( 20 ) ]

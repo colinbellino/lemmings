@@ -133,7 +133,6 @@ func _process(delta: float) -> void:
     if Input.is_action_just_released("ui_up"):
         spawn_rate = clamp(spawn_rate - 10, 10, 100)
     if Input.is_action_pressed("ui_left"):
-        print(camera.get_viewport().size.x)
         camera.position.x = clamp(camera.position.x - 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
     if Input.is_action_pressed("ui_right"):
         camera.position.x = clamp(camera.position.x + 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
@@ -225,15 +224,6 @@ func load_level(level: Level) -> void:
             map_data.set(index, value)
     map_image.unlock()
 
-    if entrance_position == Vector2.ZERO:
-        printerr("Could not find entrance position.")
-        quit_game()
-        return
-    if exit_position == Vector2.ZERO:
-        printerr("Could not find exit position.")
-        quit_game()
-        return
-
     # Prepare the images
     map_texture = ImageTexture.new()
     map_texture.create_from_image(map_image, 0)
@@ -242,12 +232,20 @@ func load_level(level: Level) -> void:
     collision_image.create(map_width, map_height, false, map_image.get_format())
 
     # Spawn the entrance and exit
+    if entrance_position == Vector2.ZERO:
+        printerr("Could not find entrance position.")
+        quit_game()
+        return
+    if exit_position == Vector2.ZERO:
+        printerr("Could not find exit position.")
+        quit_game()
+        return
     print("entrance_position: ", entrance_position)
-    entrance_node = config.entrance_prefab.instance()
+    entrance_node = level.entrance.instance()
     entrance_node.position = entrance_position
     map_sprite.add_child(entrance_node)
     print("exit_position: ", exit_position)
-    exit_node = config.exit_prefab.instance()
+    exit_node = level.exit.instance()
     exit_node.position = exit_position
     map_sprite.add_child(exit_node)
 
@@ -273,6 +271,10 @@ func unload_level() -> void:
 func start_level() -> void:
     print_stray_nodes()
     
+    var level : Level = config.levels[current_level]
+
+    camera.position.x = level.camera_x
+    camera.position.y = level.camera_y
     spawn_is_active = false
 
     yield(get_tree().create_timer(1), "timeout")
@@ -289,7 +291,7 @@ func start_level() -> void:
 
     yield(get_tree().create_timer(1), "timeout")
 
-    audio_player_music.stream = config.levels[current_level].music
+    audio_player_music.stream = level.music
     audio_player_music.play()
 
 func get_unit_at(x: int, y: int) -> int:
