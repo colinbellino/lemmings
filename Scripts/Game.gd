@@ -262,13 +262,12 @@ func unload_level() -> void:
     entrance_node.queue_free()
     exit_node.queue_free()
 
+    audio_player_music.stop()
+
 func start_level() -> void:
     print_stray_nodes()
     
     spawn_is_active = false
-
-    audio_player_music.stream = config.musics[0]
-    audio_player_music.play()
 
     yield(get_tree().create_timer(1), "timeout")
 
@@ -281,6 +280,11 @@ func start_level() -> void:
 
     audio_player_sound.stream = config.sound_start
     audio_player_sound.play()
+
+    yield(get_tree().create_timer(1), "timeout")
+
+    audio_player_music.stream = config.levels[current_level].music
+    audio_player_music.play()
 
 func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
