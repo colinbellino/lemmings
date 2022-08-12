@@ -95,6 +95,11 @@ unique_name_in_owner = true
 modulate = Color( 1, 1, 1, 0.427451 )
 centered = false
 
+[node name="Camera" type="Camera2D" parent="Scaler"]
+unique_name_in_owner = true
+anchor_mode = 0
+current = true
+
 [node name="MusicAudioPlayer" type="AudioStreamPlayer" parent="."]
 unique_name_in_owner = true
 bus = "Music"
