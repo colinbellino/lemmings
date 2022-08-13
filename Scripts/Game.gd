@@ -7,17 +7,17 @@ const TIME_SCALE : int = 1
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
 const PIXEL_PAINT : int = 1 << 2
-const TOOL_DESTROY_RECT : int = 0
-const TOOL_UNIT_SPAWN : int = 1
-const TOOL_PAINT_RECT : int = 3
-const TOOL_UNIT_DIG_VERTICAL : int = 2
-const TOOL_UNIT_DIG_HORIZONTAL : int = 3
-const TOOL_UNIT_FLOAT : int = 4
+const TOOL_PAINT_RECT : int = 0
+const TOOL_ERASE_RECT : int = 1
+const TOOL_UNIT_SPAWN : int = 2
+const TOOL_UNIT_DIG_VERTICAL : int = 3
+const TOOL_UNIT_DIG_HORIZONTAL : int = 4
+const TOOL_UNIT_FLOAT : int = 5
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
-const JOB_DIG_DURATION : int = 145
+const JOB_DIG_DURATION : int = 300
 const JOB_FLOAT_DELAY : int = 10
-const FALL_DURATION_FATAL : int = 48
+const FALL_DURATION_FATAL : int = 55
 const FALL_DURATION_FLOAT : int = 25
 
 # Scene stuff
@@ -48,8 +48,8 @@ var now_tick : int
 var is_ticking : bool
 var game_scale : int
 var next_tick_at : float
-var tool_primary : int = TOOL_DESTROY_RECT
-var tool_secondary : int = TOOL_UNIT_FLOAT
+var tool_primary : int = TOOL_PAINT_RECT
+var tool_secondary : int = TOOL_ERASE_RECT
 var tool_tertiary : int = TOOL_UNIT_SPAWN
 var mouse_button_pressed : int
 
@@ -69,6 +69,7 @@ var entrance_position : Vector2
 var exit_position : Vector2
 var spawn_is_active : bool
 var spawn_rate : int
+var jobs_count : Dictionary
 
 func _ready() -> void:
     if OS.is_debug_build():
@@ -83,7 +84,7 @@ func _ready() -> void:
     set_cursor(CURSOR_DEFAULT)
 
     toggle_debug()
-    action0_button.connect("pressed", self, "select_tool", [TOOL_DESTROY_RECT])
+    action0_button.connect("pressed", self, "select_tool", [TOOL_ERASE_RECT])
     action1_button.connect("pressed", self, "select_tool", [TOOL_UNIT_SPAWN])
     action2_button.connect("pressed", self, "select_tool", [TOOL_UNIT_DIG_VERTICAL])
     action3_button.connect("pressed", self, "select_tool", [TOOL_UNIT_DIG_HORIZONTAL])
@@ -149,7 +150,7 @@ func _process(delta: float) -> void:
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
-    var mouse_map_position = viewport_to_map_position(get_local_mouse_position())
+    var mouse_map_position = get_mouse_position()
 
     # Update cursor
     var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
@@ -171,18 +172,22 @@ func _process(delta: float) -> void:
         "Units": "%s / %s" % [units_spawned, units.size()],
         "Spawn rate": spawn_rate,
         "Goal": "%s / %s" % [units_exited, units_goal],
+        "Jobs": jobs_count,
     }, "\t"))
 
     if now >= next_tick_at:
         tick()
         next_tick_at = now + TICK_SPEED
 
+func get_mouse_position() -> Vector2 :
+    return camera.get_local_mouse_position() + camera.position
+
 func _unhandled_input(event) -> void:
     if event is InputEventMouseMotion:
         pass
 
     if event is InputEventMouseButton:
-        var map_position = viewport_to_map_position(event.position)
+        var map_position = get_mouse_position()
         if event.button_index == BUTTON_LEFT:
             use_tool(tool_primary, map_position.x, map_position.y, event.pressed)
         if event.button_index == BUTTON_RIGHT:
@@ -196,6 +201,10 @@ func load_level(level: Level) -> void:
     units_max = level.units_max
     units_goal = level.units_goal
     spawn_rate = level.spawn_rate
+    jobs_count = {}
+    jobs_count[Unit.JOBS.DIG_VERTICAL] = level.job_dig_vertical
+    jobs_count[Unit.JOBS.DIG_HORIZONTAL] = level.job_dig_horizontal
+    jobs_count[Unit.JOBS.FLOAT] = level.job_float
 
     units.resize(units_max)
 
@@ -332,41 +341,65 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
         return
 
     match tool_id:
-        TOOL_DESTROY_RECT:
+        TOOL_ERASE_RECT:
             var size = 20
-            destroy_rect(x - size / 2, y - size / 2, size, size)
+            erase_rect(x - size / 2, y - size / 2, size, size)
+
         TOOL_PAINT_RECT:
             var size = 20
             paint_rect(x - size / 2, y - size / 2, size, size)
+
         TOOL_UNIT_SPAWN:
             if not pressed:
                 if not has_flag(x, y, PIXEL_SOLID):
                     var unit := spawn_unit(x, y)
                     print("%s spawned" % unit.name)
+
         TOOL_UNIT_DIG_VERTICAL:
-            if not pressed:
-                var unit_index := get_unit_at(x, y)
-                if unit_index > -1:
-                    var unit : Unit = units[unit_index]
-                    if not unit.has_job(Unit.JOBS.DIG_VERTICAL):
-                        unit.jobs[Unit.JOBS.DIG_VERTICAL] = {
-                            duration = JOB_DIG_DURATION,
-                            started_at = now_tick,
-                        }
-                        audio_player_sound.stream = config.sound_assign_job
-                        audio_player_sound.play()
+            if pressed:
+                return
+            
+            if jobs_count[Unit.JOBS.DIG_VERTICAL] < 1:
+                return
+
+            var unit_index := get_unit_at(x, y)
+            if unit_index == -1:
+                return
+                
+            var unit : Unit = units[unit_index]
+            if unit.has_job(Unit.JOBS.DIG_VERTICAL):
+                return
+
+            unit.jobs[Unit.JOBS.DIG_VERTICAL] = {
+                duration = JOB_DIG_DURATION,
+                started_at = now_tick,
+            }
+            audio_player_sound.stream = config.sound_assign_job
+            audio_player_sound.play()
+            jobs_count[Unit.JOBS.DIG_VERTICAL] -= 1
+
         TOOL_UNIT_FLOAT:
-            if not pressed:
-                var unit_index := get_unit_at(x, y)
-                if unit_index > -1:
-                    var unit : Unit = units[unit_index]
-                    if not unit.has_job(Unit.JOBS.FLOAT):
-                        unit.jobs[Unit.JOBS.FLOAT] = {
-                            duration = -1,
-                            started_at = now_tick,
-                        }
-                        audio_player_sound.stream = config.sound_assign_job
-                        audio_player_sound.play()
+            if pressed:
+                return
+
+            if jobs_count[Unit.JOBS.FLOAT] < 1:
+                return
+
+            var unit_index := get_unit_at(x, y)
+            if unit_index == -1:
+                return
+
+            var unit : Unit = units[unit_index]
+            if unit.has_job(Unit.JOBS.FLOAT):
+                return
+            
+            unit.jobs[Unit.JOBS.FLOAT] = {
+                duration = -1,
+                started_at = now_tick,
+            }
+            audio_player_sound.stream = config.sound_assign_job
+            audio_player_sound.play()
+            jobs_count[Unit.JOBS.FLOAT] -= 1
 
 func select_tool(tool_id: int) -> void: 
     tool_primary = tool_id
@@ -460,7 +493,7 @@ func tick() -> void:
                         if (now_tick - unit.state_entered_at) % 10 == 0:
                             var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y + 3, unit.width, 3)
                             debug_draw.add_rect(unit_rect, Color.red)
-                            destroy_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
+                            erase_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
     
                             var is_not_done := now_tick < unit.state_entered_at + JOB_DIG_DURATION
                             if is_not_done:
@@ -549,9 +582,6 @@ func tick() -> void:
             is_ticking = true
             start_level()
 
-func viewport_to_map_position(pos: Vector2) -> Vector2:
-    return pos / game_scale
-
 func spawn_unit(x: int, y: int) -> Unit: 
     if units_spawned >= units.size():
         print("Max units reached (%s)" % units.size())
@@ -570,7 +600,7 @@ func spawn_unit(x: int, y: int) -> Unit:
 
     return unit
 
-func destroy_rect(origin_x: int, origin_y: int, width: int, height: int) -> void:
+func erase_rect(origin_x: int, origin_y: int, width: int, height: int) -> void:
     var pixels_to_delete : PoolIntArray = []
 
     for offset_x in range(0, width):
@@ -661,10 +691,13 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     var end := OS.get_ticks_usec()
     var time := (end - start) / 1000.0
 
-    print("collision_update: %s pixels in %sms" % [count, time])
+    # print("collision_update: %s pixels in %sms" % [count, time])
 
 static func calculate_index(x: int, y: int, width: int) -> int:
     return y * width + x
 
 static func calculate_position(index: int, width: int) -> Vector2:
     return Vector2(index % width, index / width)
+
+func to_viewport_position(pos: Vector2) -> Vector2:
+    return pos - camera.position

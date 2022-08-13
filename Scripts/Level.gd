@@ -10,3 +10,6 @@ export var camera_y : int
 export(int, 1, 100, 1) var units_max : int = 30
 export(int, 1, 100, 1) var units_goal : int = 10
 export(int, 10, 100, 1) var spawn_rate : int = 50
+export var job_dig_vertical : int
+export var job_dig_horizontal : int
+export var job_float : int
