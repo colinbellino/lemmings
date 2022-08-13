@@ -1,18 +1,39 @@
 extends Node2D
 class_name Game
 
+enum JOBS {
+    NONE = 0,
+    CLIMB = 1,
+    FLOAT = 2,
+    EXPLODE = 3,
+    STOP = 4, 
+    BRIDGE = 5,
+    DIG_HORIZONTAL = 6,
+    MINE = 7,
+    DIG_VERTICAL = 8,
+}
+
+enum TOOLS {
+    NONE = 0
+    JOB_CLIMB = 1
+    JOB_FLOAT = 2
+    JOB_EXPLODE = 3
+    JOB_STOP = 4
+    JOB_BRIDGE = 5
+    JOB_DIG_HORIZONTAL = 6
+    JOB_MINE = 7
+    JOB_DIG_VERTICAL = 8
+    RECT_PAINT = 9
+    RECT_ERASE = 10
+    SPAWN_UNIT = 11
+}
+
 const GAME_SCALE : int = 6
 const TICK_SPEED : int = 50
 const TIME_SCALE : int = 1
 const PIXEL_EMPTY : int = 0
 const PIXEL_SOLID : int = 1
 const PIXEL_PAINT : int = 1 << 2
-const TOOL_PAINT_RECT : int = 0
-const TOOL_ERASE_RECT : int = 1
-const TOOL_UNIT_SPAWN : int = 2
-const TOOL_UNIT_DIG_VERTICAL : int = 3
-const TOOL_UNIT_DIG_HORIZONTAL : int = 4
-const TOOL_UNIT_FLOAT : int = 5
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
 const JOB_DIG_DURATION : int = 300
@@ -37,6 +58,14 @@ onready var action1_button : Button = get_node("%Action1")
 onready var action2_button : Button = get_node("%Action2")
 onready var action3_button : Button = get_node("%Action3")
 onready var action4_button : Button = get_node("%Action4")
+onready var job_button_1 : JobButton = get_node("%JobButton1")
+onready var job_button_2 : JobButton = get_node("%JobButton2")
+onready var job_button_3 : JobButton = get_node("%JobButton3")
+onready var job_button_4 : JobButton = get_node("%JobButton4")
+onready var job_button_5 : JobButton = get_node("%JobButton5")
+onready var job_button_6 : JobButton = get_node("%JobButton6")
+onready var job_button_7 : JobButton = get_node("%JobButton7")
+onready var job_button_8 : JobButton = get_node("%JobButton8")
 onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
 onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
@@ -48,9 +77,9 @@ var now_tick : int
 var is_ticking : bool
 var game_scale : int
 var next_tick_at : float
-var tool_primary : int = TOOL_PAINT_RECT
-var tool_secondary : int = TOOL_ERASE_RECT
-var tool_tertiary : int = TOOL_UNIT_SPAWN
+var tool_primary : int = TOOLS.JOB_DIG_VERTICAL
+var tool_secondary : int = TOOLS.RECT_ERASE
+var tool_tertiary : int = TOOLS.RECT_PAINT
 var mouse_button_pressed : int
 
 # Level data
@@ -83,12 +112,19 @@ func _ready() -> void:
 
     set_cursor(CURSOR_DEFAULT)
 
+    # Init UI
     toggle_debug()
-    action0_button.connect("pressed", self, "select_tool", [TOOL_ERASE_RECT])
-    action1_button.connect("pressed", self, "select_tool", [TOOL_UNIT_SPAWN])
-    action2_button.connect("pressed", self, "select_tool", [TOOL_UNIT_DIG_VERTICAL])
-    action3_button.connect("pressed", self, "select_tool", [TOOL_UNIT_DIG_HORIZONTAL])
-    action4_button.connect("pressed", self, "select_tool", [TOOL_UNIT_FLOAT])
+    action0_button.connect("pressed", self, "select_tool", [TOOLS.RECT_PAINT])
+    action1_button.connect("pressed", self, "select_tool", [TOOLS.RECT_ERASE])
+    action2_button.connect("pressed", self, "select_tool", [TOOLS.SPAWN_UNIT])
+    job_button_1.connect("pressed", self, "select_tool", [TOOLS.JOB_CLIMB])
+    job_button_2.connect("pressed", self, "select_tool", [TOOLS.JOB_FLOAT])
+    job_button_3.connect("pressed", self, "select_tool", [TOOLS.JOB_EXPLODE])
+    job_button_4.connect("pressed", self, "select_tool", [TOOLS.JOB_STOP])
+    job_button_5.connect("pressed", self, "select_tool", [TOOLS.JOB_BRIDGE])
+    job_button_6.connect("pressed", self, "select_tool", [TOOLS.JOB_DIG_HORIZONTAL])
+    job_button_7.connect("pressed", self, "select_tool", [TOOLS.JOB_MINE])
+    job_button_8.connect("pressed", self, "select_tool", [TOOLS.JOB_DIG_VERTICAL])
 
     collision_image = Image.new()
 
@@ -202,9 +238,23 @@ func load_level(level: Level) -> void:
     units_goal = level.units_goal
     spawn_rate = level.spawn_rate
     jobs_count = {}
-    jobs_count[Unit.JOBS.DIG_VERTICAL] = level.job_dig_vertical
-    jobs_count[Unit.JOBS.DIG_HORIZONTAL] = level.job_dig_horizontal
-    jobs_count[Unit.JOBS.FLOAT] = level.job_float
+    jobs_count[JOBS.CLIMB] = level.job_climb
+    jobs_count[JOBS.FLOAT] = level.job_float
+    jobs_count[JOBS.EXPLODE] = level.job_explode
+    jobs_count[JOBS.STOP] = level.job_stop
+    jobs_count[JOBS.BRIDGE] = level.job_bridge
+    jobs_count[JOBS.DIG_HORIZONTAL] = level.job_dig_horizontal
+    jobs_count[JOBS.MINE] = level.job_mine
+    jobs_count[JOBS.DIG_VERTICAL] = level.job_dig_vertical
+
+    job_button_1.set_data(JOBS.CLIMB, String(jobs_count[JOBS.CLIMB]))
+    job_button_2.set_data(JOBS.FLOAT, String(jobs_count[JOBS.FLOAT]))
+    job_button_3.set_data(JOBS.EXPLODE, String(jobs_count[JOBS.EXPLODE]))
+    job_button_4.set_data(JOBS.STOP, String(jobs_count[JOBS.STOP]))
+    job_button_5.set_data(JOBS.BRIDGE, String(jobs_count[JOBS.BRIDGE]))
+    job_button_6.set_data(JOBS.DIG_HORIZONTAL, String(jobs_count[JOBS.DIG_HORIZONTAL]))
+    job_button_7.set_data(JOBS.MINE, String(jobs_count[JOBS.MINE]))
+    job_button_8.set_data(JOBS.DIG_VERTICAL, String(jobs_count[JOBS.DIG_VERTICAL]))
 
     units.resize(units_max)
 
@@ -249,11 +299,9 @@ func load_level(level: Level) -> void:
         printerr("Could not find exit position.")
         quit_game()
         return
-    print("entrance_position: ", entrance_position)
     entrance_node = level.entrance.instance()
     entrance_node.position = entrance_position
     map_sprite.add_child(entrance_node)
-    print("exit_position: ", exit_position)
     exit_node = level.exit.instance()
     exit_node.position = exit_position
     map_sprite.add_child(exit_node)
@@ -341,25 +389,25 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
         return
 
     match tool_id:
-        TOOL_ERASE_RECT:
+        TOOLS.RECT_ERASE:
             var size = 20
             erase_rect(x - size / 2, y - size / 2, size, size)
 
-        TOOL_PAINT_RECT:
+        TOOLS.RECT_PAINT:
             var size = 20
             paint_rect(x - size / 2, y - size / 2, size, size)
 
-        TOOL_UNIT_SPAWN:
+        TOOLS.SPAWN_UNIT:
             if not pressed:
                 if not has_flag(x, y, PIXEL_SOLID):
                     var unit := spawn_unit(x, y)
                     print("%s spawned" % unit.name)
 
-        TOOL_UNIT_DIG_VERTICAL:
+        TOOLS.JOB_DIG_VERTICAL:
             if pressed:
                 return
             
-            if jobs_count[Unit.JOBS.DIG_VERTICAL] < 1:
+            if jobs_count[JOBS.DIG_VERTICAL] < 1:
                 return
 
             var unit_index := get_unit_at(x, y)
@@ -367,22 +415,22 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
                 
             var unit : Unit = units[unit_index]
-            if unit.has_job(Unit.JOBS.DIG_VERTICAL):
+            if unit.has_job(JOBS.DIG_VERTICAL):
                 return
 
-            unit.jobs[Unit.JOBS.DIG_VERTICAL] = {
+            unit.jobs[JOBS.DIG_VERTICAL] = {
                 duration = JOB_DIG_DURATION,
                 started_at = now_tick,
             }
             audio_player_sound.stream = config.sound_assign_job
             audio_player_sound.play()
-            jobs_count[Unit.JOBS.DIG_VERTICAL] -= 1
+            jobs_count[JOBS.DIG_VERTICAL] -= 1
 
-        TOOL_UNIT_FLOAT:
+        TOOLS.JOB_FLOAT:
             if pressed:
                 return
 
-            if jobs_count[Unit.JOBS.FLOAT] < 1:
+            if jobs_count[JOBS.FLOAT] < 1:
                 return
 
             var unit_index := get_unit_at(x, y)
@@ -390,18 +438,28 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
 
             var unit : Unit = units[unit_index]
-            if unit.has_job(Unit.JOBS.FLOAT):
+            if unit.has_job(JOBS.FLOAT):
                 return
             
-            unit.jobs[Unit.JOBS.FLOAT] = {
+            unit.jobs[JOBS.FLOAT] = {
                 duration = -1,
                 started_at = now_tick,
             }
             audio_player_sound.stream = config.sound_assign_job
             audio_player_sound.play()
-            jobs_count[Unit.JOBS.FLOAT] -= 1
+            jobs_count[JOBS.FLOAT] -= 1
 
-func select_tool(tool_id: int) -> void: 
+        _:
+            if pressed:
+                return
+
+            print("Tool not implemented: ", TOOLS.keys()[tool_id])
+            return
+
+    print("Used tool: %s at (%s,%s)" % [TOOLS.keys()[tool_id], x, y])
+
+func select_tool(tool_id: int) -> void:
+    print("Tool selected: ", tool_id)
     tool_primary = tool_id
 
 func toggle_debug() -> void: 
@@ -426,7 +484,7 @@ func tick() -> void:
             var jobs_str := ""
             for index in range(0, unit.jobs.size()):
                 var job_id = unit.jobs.keys()[index]
-                jobs_str += "%s" % unit.JOBS.keys()[job_id]
+                jobs_str += "%s" % JOBS.keys()[job_id]
                 if index < unit.jobs.size() - 1:
                     jobs_str += ", "
             debug_draw.add_text(unit.position + Vector2(-5, -10), Unit.STATES.keys()[unit.state], Color.white)
@@ -468,7 +526,7 @@ func tick() -> void:
                         unit.state = Unit.STATES.WALKING
                         unit.state_entered_at = now_tick
                 else:
-                    if unit.has_job(Unit.JOBS.FLOAT) && now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
+                    if unit.has_job(JOBS.FLOAT) && now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
                         unit.state = Unit.STATES.FLOATING
                         unit.state_entered_at = now_tick
                     else:
@@ -488,7 +546,7 @@ func tick() -> void:
 
             Unit.STATES.WALKING:
                 if is_grounded:
-                    if unit.has_job(Unit.JOBS.DIG_VERTICAL):
+                    if unit.has_job(JOBS.DIG_VERTICAL):
                         unit.play("dig")
                         if (now_tick - unit.state_entered_at) % 10 == 0:
                             var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y + 3, unit.width, 3)
