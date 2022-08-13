@@ -107,6 +107,26 @@ unique_name_in_owner = true
 margin_left = 576.0
 margin_right = 608.0
 
+[node name="UnitsSpawnedLabel" type="Label" parent="HUD/Panel"]
+unique_name_in_owner = true
+margin_left = 1720.0
+margin_top = 16.0
+margin_right = 1780.0
+margin_bottom = 47.0
+rect_scale = Vector2( 3, 3 )
+text = "OUT: 99"
+align = 2
+
+[node name="UnitsExitedLabel" type="Label" parent="HUD/Panel"]
+unique_name_in_owner = true
+margin_left = 1720.0
+margin_top = 64.0
+margin_right = 1780.0
+margin_bottom = 95.0
+rect_scale = Vector2( 3, 3 )
+text = "IN: 99"
+align = 2
+
 [node name="Scaler" type="Node2D" parent="."]
 unique_name_in_owner = true
 

@@ -58,6 +58,8 @@ onready var action1_button : Button = get_node("%Action1")
 onready var action2_button : Button = get_node("%Action2")
 onready var action3_button : Button = get_node("%Action3")
 onready var action4_button : Button = get_node("%Action4")
+onready var units_spawned_label : Label = get_node("%UnitsSpawnedLabel")
+onready var units_exited_label : Label = get_node("%UnitsExitedLabel")
 onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
 onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
@@ -250,7 +252,7 @@ func load_level(level: Level) -> void:
         var count : int = jobs_count[job_id]
         job_buttons[job_index].set_data(job_index + 1, String(count))
         if count > 0 && first_selected == false:
-            job_buttons[job_index].grab_focus()
+            select_tool(job_buttons[job_index], job_index + 1)
             first_selected = true
 
     units.resize(units_max)
@@ -456,7 +458,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
     print("Used tool: %s at (%s,%s)" % [TOOLS.keys()[tool_id], x, y])
 
 func select_tool(button: Button, tool_id: int) -> void:
-    print("Tool selected: ", tool_id)
+    print("Tool selected: ", TOOLS.keys()[tool_id])
     button.grab_focus()
     tool_primary = tool_id
 
@@ -480,11 +482,12 @@ func tick() -> void:
 
         if OS.is_debug_build():
             var jobs_str := ""
-            for index in range(0, unit.jobs.size()):
-                var job_id = unit.jobs.keys()[index]
-                jobs_str += "%s" % JOBS.keys()[job_id]
-                if index < unit.jobs.size() - 1:
-                    jobs_str += ", "
+
+            for job_index in range(0, JOBS.size()):
+                var job_id : int = JOBS.values()[job_index]
+                if unit.has_job(job_id):
+                    jobs_str += "%s " % JOBS.keys()[job_index]
+
             debug_draw.add_text(unit.position + Vector2(-5, -10), Unit.STATES.keys()[unit.state], Color.white)
             debug_draw.add_text(unit.position + Vector2(-5, -7), jobs_str, Color.white)
 
@@ -637,6 +640,10 @@ func tick() -> void:
             load_level(config.levels[current_level])
             is_ticking = true
             start_level()
+
+    # Update UI
+    units_spawned_label.text = "OUT: %s" % units_spawned
+    units_exited_label.text = "IN: %s" % units_exited
 
 func spawn_unit(x: int, y: int) -> Unit: 
     if units_spawned >= units.size():
