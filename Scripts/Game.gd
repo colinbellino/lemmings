@@ -28,6 +28,9 @@ enum TOOLS {
     SPAWN_UNIT = 11,
 }
 
+signal level_unloaded
+signal level_loaded
+
 const GAME_SCALE : int = 6
 const TICK_SPEED : int = 50
 const TIME_SCALE : int = 1
@@ -53,11 +56,20 @@ onready var map_sprite : Sprite = get_node("%Map")
 onready var collision_sprite : Sprite = get_node("%Collision")
 onready var debug_label : Label = get_node("%DebugLabel")
 onready var debug_draw : Control = get_node("%DebugCanvas")
+onready var transitions : Transitions = get_node("%Transitions")
 onready var action0_button : Button = get_node("%Action0")
 onready var action1_button : Button = get_node("%Action1")
 onready var action2_button : Button = get_node("%Action2")
-onready var action3_button : Button = get_node("%Action3")
-onready var action4_button : Button = get_node("%Action4")
+onready var job_buttons : Array = [
+    get_node("%JobButton1"),
+    get_node("%JobButton2"),
+    get_node("%JobButton3"),
+    get_node("%JobButton4"),
+    get_node("%JobButton5"),
+    get_node("%JobButton6"),
+    get_node("%JobButton7"),
+    get_node("%JobButton8"),
+]
 onready var units_spawned_label : Label = get_node("%UnitsSpawnedLabel")
 onready var units_exited_label : Label = get_node("%UnitsExitedLabel")
 onready var units_dead_label : Label = get_node("%UnitsDeadLabel")
@@ -76,7 +88,6 @@ var tool_primary : int = TOOLS.JOB_DIG_VERTICAL
 var tool_secondary : int = TOOLS.RECT_ERASE
 var tool_tertiary : int = TOOLS.RECT_PAINT
 var mouse_button_pressed : int
-var job_buttons : Array
 
 # Level data
 var units : Array = []
@@ -110,14 +121,6 @@ func _ready() -> void:
 
     # Init UI
     toggle_debug()
-    job_buttons.append(get_node("%JobButton1"))
-    job_buttons.append(get_node("%JobButton2"))
-    job_buttons.append(get_node("%JobButton3"))
-    job_buttons.append(get_node("%JobButton4"))
-    job_buttons.append(get_node("%JobButton5"))
-    job_buttons.append(get_node("%JobButton6"))
-    job_buttons.append(get_node("%JobButton7"))
-    job_buttons.append(get_node("%JobButton8"))
     action0_button.connect("pressed", self, "select_tool", [action0_button, TOOLS.RECT_PAINT])
     action1_button.connect("pressed", self, "select_tool", [action1_button, TOOLS.RECT_ERASE])
     action2_button.connect("pressed", self, "select_tool", [action2_button, TOOLS.SPAWN_UNIT])
@@ -128,6 +131,7 @@ func _ready() -> void:
 
     # Load and start the level
     load_level(config.levels[current_level])
+    yield(self, "level_loaded")
     is_ticking = true
     start_level()
  
@@ -148,18 +152,20 @@ func _process(delta: float) -> void:
         
     if Input.is_action_just_released("debug_5"):
         print("Restarting level")
-        is_ticking = false
         unload_level()
+        yield(self, "level_unloaded")
         load_level(config.levels[current_level])
+        yield(self, "level_loaded")
         is_ticking = true
         start_level()
         
     if Input.is_action_just_released("debug_12"):
-        print("Restarting level")
-        is_ticking = false
+        print("Next level")
         unload_level()
+        yield(self, "level_unloaded")
         current_level += 1
         load_level(config.levels[current_level])
+        yield(self, "level_loaded")
         is_ticking = true
         start_level()
 
@@ -308,7 +314,15 @@ func load_level(level: Level) -> void:
 
     update_map(0, 0, map_width, map_height)
 
+    yield(get_tree(), "idle_frame")
+    # yield(get_tree().create_timer(1), "timeout")
+
+    emit_signal("level_loaded")
+
 func unload_level() -> void:
+    transitions.open()
+    yield(transitions, "opened")
+
     for unit_index in units_spawned:
         var unit : Unit = units[unit_index]
         unit.queue_free()
@@ -325,6 +339,8 @@ func unload_level() -> void:
 
     audio_player_music.stop()
 
+    emit_signal("level_unloaded")
+
 func start_level() -> void:
     print_stray_nodes()
     
@@ -334,7 +350,8 @@ func start_level() -> void:
     camera.position.y = level.camera_y
     spawn_is_active = false
 
-    yield(get_tree().create_timer(1), "timeout")
+    transitions.close()
+    yield(transitions, "closed")
 
     audio_player_sound.stream = config.sound_door_open
     audio_player_sound.play()
@@ -626,10 +643,12 @@ func tick() -> void:
             if current_level >= config.levels.size() - 1:
                 print("Game over")
                 unload_level()
+                yield(self, "level_unloaded")
             else:
                 print("Loading next level")
                 yield(get_tree().create_timer(2), "timeout")
                 unload_level()
+                yield(self, "level_unloaded")
                 current_level += 1
                 load_level(config.levels[current_level])
                 is_ticking = true
@@ -638,7 +657,9 @@ func tick() -> void:
             print("Restarting current level")
             yield(get_tree().create_timer(2), "timeout")
             unload_level()
+            yield(self, "level_unloaded")
             load_level(config.levels[current_level])
+            yield(self, "level_loaded")
             is_ticking = true
             start_level()
 
