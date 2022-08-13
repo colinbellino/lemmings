@@ -298,7 +298,7 @@ func start_level() -> void:
     audio_player_sound.stream = config.sound_start
     audio_player_sound.play()
 
-    yield(get_tree().create_timer(1), "timeout")
+    yield(get_tree().create_timer(2), "timeout")
 
     audio_player_music.stream = level.music
     audio_player_music.play()
