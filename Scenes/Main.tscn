@@ -1,8 +1,9 @@
-[gd_scene load_steps=4 format=2]
+[gd_scene load_steps=5 format=2]
 
 [ext_resource path="res://Scripts/Game.gd" type="Script" id=1]
 [ext_resource path="res://Scripts/DebugDraw.gd" type="Script" id=2]
 [ext_resource path="res://Prefabs/JobButton.tscn" type="PackedScene" id=3]
+[ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=4]
 
 [node name="Game" type="Node2D"]
 position = Vector2( 0, 2 )
@@ -22,43 +23,43 @@ script = ExtResource( 2 )
 unique_name_in_owner = true
 anchor_top = 1.0
 anchor_bottom = 1.0
-margin_left = 848.0
-margin_top = -224.0
-margin_right = 928.0
-margin_bottom = -204.0
-rect_scale = Vector2( 4, 4 )
+margin_left = 1760.0
+margin_top = -312.0
+margin_right = 1904.0
+margin_bottom = -264.0
+custom_fonts/font = ExtResource( 4 )
 text = "Rect Paint"
 
 [node name="Action1" type="Button" parent="Debug/DebugCanvas"]
 unique_name_in_owner = true
 anchor_left = 1.0
 anchor_right = 1.0
-margin_left = -712.0
-margin_top = 856.0
-margin_right = -632.0
-margin_bottom = 876.0
-rect_scale = Vector2( 4, 4 )
+margin_left = -160.0
+margin_top = 832.0
+margin_right = -16.0
+margin_bottom = 880.0
+custom_fonts/font = ExtResource( 4 )
 text = "Rect Erase"
 
 [node name="Action2" type="Button" parent="Debug/DebugCanvas"]
 unique_name_in_owner = true
 anchor_left = 1.0
 anchor_right = 1.0
-margin_left = -352.0
-margin_top = 856.0
-margin_right = -269.0
-margin_bottom = 876.0
-rect_scale = Vector2( 4, 4 )
+margin_left = -160.0
+margin_top = 896.0
+margin_right = -16.0
+margin_bottom = 944.0
+custom_fonts/font = ExtResource( 4 )
 text = "Unit Spawn"
 
 [node name="DebugLabel" type="Label" parent="Debug"]
 unique_name_in_owner = true
 margin_left = 20.0
 margin_top = 20.0
-margin_right = 420.0
-margin_bottom = 270.0
-rect_scale = Vector2( 3, 3 )
+margin_right = 1220.0
+margin_bottom = 820.0
 custom_colors/font_color = Color( 1, 1, 1, 1 )
+custom_fonts/font = ExtResource( 4 )
 text = "DEBUG"
 
 [node name="HUD" type="CanvasLayer" parent="."]
@@ -75,56 +76,66 @@ unique_name_in_owner = true
 [node name="JobButton2" parent="HUD/Panel" instance=ExtResource( 3 )]
 unique_name_in_owner = true
 margin_left = 96.0
-margin_right = 128.0
+margin_right = 160.0
 
 [node name="JobButton3" parent="HUD/Panel" instance=ExtResource( 3 )]
 unique_name_in_owner = true
 margin_left = 176.0
-margin_right = 208.0
+margin_right = 240.0
 
 [node name="JobButton4" parent="HUD/Panel" instance=ExtResource( 3 )]
 unique_name_in_owner = true
 margin_left = 256.0
-margin_right = 288.0
+margin_right = 320.0
 
 [node name="JobButton5" parent="HUD/Panel" instance=ExtResource( 3 )]
 unique_name_in_owner = true
 margin_left = 336.0
-margin_right = 368.0
+margin_right = 400.0
 
 [node name="JobButton6" parent="HUD/Panel" instance=ExtResource( 3 )]
 unique_name_in_owner = true
 margin_left = 416.0
-margin_right = 448.0
+margin_right = 480.0
 
 [node name="JobButton7" parent="HUD/Panel" instance=ExtResource( 3 )]
 unique_name_in_owner = true
 margin_left = 496.0
-margin_right = 528.0
+margin_right = 560.0
 
 [node name="JobButton8" parent="HUD/Panel" instance=ExtResource( 3 )]
 unique_name_in_owner = true
 margin_left = 576.0
-margin_right = 608.0
+margin_right = 640.0
 
 [node name="UnitsSpawnedLabel" type="Label" parent="HUD/Panel"]
 unique_name_in_owner = true
-margin_left = 1720.0
+margin_left = 1806.0
 margin_top = 16.0
-margin_right = 1780.0
-margin_bottom = 47.0
-rect_scale = Vector2( 3, 3 )
-text = "OUT: 99"
+margin_right = 1906.0
+margin_bottom = 58.0
+custom_fonts/font = ExtResource( 4 )
+text = "Out: 99"
 align = 2
 
 [node name="UnitsExitedLabel" type="Label" parent="HUD/Panel"]
 unique_name_in_owner = true
-margin_left = 1720.0
-margin_top = 64.0
-margin_right = 1780.0
-margin_bottom = 95.0
-rect_scale = Vector2( 3, 3 )
-text = "IN: 99"
+margin_left = 1806.0
+margin_top = 48.0
+margin_right = 1906.0
+margin_bottom = 90.0
+custom_fonts/font = ExtResource( 4 )
+text = "In: 99"
+align = 2
+
+[node name="UnitsDeadLabel" type="Label" parent="HUD/Panel"]
+unique_name_in_owner = true
+margin_left = 1806.0
+margin_top = 80.0
+margin_right = 1906.0
+margin_bottom = 122.0
+custom_fonts/font = ExtResource( 4 )
+text = "Dead: 99"
 align = 2
 
 [node name="Scaler" type="Node2D" parent="."]

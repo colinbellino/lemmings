@@ -60,6 +60,7 @@ onready var action3_button : Button = get_node("%Action3")
 onready var action4_button : Button = get_node("%Action4")
 onready var units_spawned_label : Label = get_node("%UnitsSpawnedLabel")
 onready var units_exited_label : Label = get_node("%UnitsExitedLabel")
+onready var units_dead_label : Label = get_node("%UnitsDeadLabel")
 onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
 onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
@@ -206,7 +207,7 @@ func _process(delta: float) -> void:
         "Spawn rate": spawn_rate,
         "Goal": "%s / %s" % [units_exited, units_goal],
         "Jobs": jobs_count,
-    }, "\t"))
+    }, "  "))
 
     if now >= next_tick_at:
         tick()
@@ -642,8 +643,9 @@ func tick() -> void:
             start_level()
 
     # Update UI
-    units_spawned_label.text = "OUT: %s" % units_spawned
-    units_exited_label.text = "IN: %s" % units_exited
+    units_spawned_label.text = "Out: %s" % units_spawned
+    units_exited_label.text = "In: %s" % units_exited
+    units_dead_label.text = "Dead: %s" % units_dead
 
 func spawn_unit(x: int, y: int) -> Unit: 
     if units_spawned >= units.size():
