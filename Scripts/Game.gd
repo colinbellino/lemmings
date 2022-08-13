@@ -2,30 +2,30 @@ extends Node2D
 class_name Game
 
 enum JOBS {
-    NONE = 0,
-    CLIMB = 1,
-    FLOAT = 2,
-    EXPLODE = 3,
-    STOP = 4, 
-    BRIDGE = 5,
-    DIG_HORIZONTAL = 6,
-    MINE = 7,
-    DIG_VERTICAL = 8,
+    NONE = 1 << 0,
+    CLIMB = 1 << 1,
+    FLOAT = 1 << 2,
+    EXPLODE = 1 << 3,
+    STOP = 1 << 4, 
+    BRIDGE = 1 << 5,
+    DIG_HORIZONTAL = 1 << 6,
+    MINE = 1 << 7,
+    DIG_VERTICAL = 1 << 8,
 }
 
 enum TOOLS {
-    NONE = 0
-    JOB_CLIMB = 1
-    JOB_FLOAT = 2
-    JOB_EXPLODE = 3
-    JOB_STOP = 4
-    JOB_BRIDGE = 5
-    JOB_DIG_HORIZONTAL = 6
-    JOB_MINE = 7
-    JOB_DIG_VERTICAL = 8
-    RECT_PAINT = 9
-    RECT_ERASE = 10
-    SPAWN_UNIT = 11
+    NONE = 0,
+    JOB_CLIMB = 1,
+    JOB_FLOAT = 2,
+    JOB_EXPLODE = 3,
+    JOB_STOP = 4,
+    JOB_BRIDGE = 5,
+    JOB_DIG_HORIZONTAL = 6,
+    JOB_MINE = 7,
+    JOB_DIG_VERTICAL = 8,
+    RECT_PAINT = 9,
+    RECT_ERASE = 10,
+    SPAWN_UNIT = 11,
 }
 
 const GAME_SCALE : int = 6
@@ -58,14 +58,6 @@ onready var action1_button : Button = get_node("%Action1")
 onready var action2_button : Button = get_node("%Action2")
 onready var action3_button : Button = get_node("%Action3")
 onready var action4_button : Button = get_node("%Action4")
-onready var job_button_1 : JobButton = get_node("%JobButton1")
-onready var job_button_2 : JobButton = get_node("%JobButton2")
-onready var job_button_3 : JobButton = get_node("%JobButton3")
-onready var job_button_4 : JobButton = get_node("%JobButton4")
-onready var job_button_5 : JobButton = get_node("%JobButton5")
-onready var job_button_6 : JobButton = get_node("%JobButton6")
-onready var job_button_7 : JobButton = get_node("%JobButton7")
-onready var job_button_8 : JobButton = get_node("%JobButton8")
 onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
 onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
@@ -81,6 +73,7 @@ var tool_primary : int = TOOLS.JOB_DIG_VERTICAL
 var tool_secondary : int = TOOLS.RECT_ERASE
 var tool_tertiary : int = TOOLS.RECT_PAINT
 var mouse_button_pressed : int
+var job_buttons : Array
 
 # Level data
 var units : Array = []
@@ -114,17 +107,19 @@ func _ready() -> void:
 
     # Init UI
     toggle_debug()
-    action0_button.connect("pressed", self, "select_tool", [TOOLS.RECT_PAINT])
-    action1_button.connect("pressed", self, "select_tool", [TOOLS.RECT_ERASE])
-    action2_button.connect("pressed", self, "select_tool", [TOOLS.SPAWN_UNIT])
-    job_button_1.connect("pressed", self, "select_tool", [TOOLS.JOB_CLIMB])
-    job_button_2.connect("pressed", self, "select_tool", [TOOLS.JOB_FLOAT])
-    job_button_3.connect("pressed", self, "select_tool", [TOOLS.JOB_EXPLODE])
-    job_button_4.connect("pressed", self, "select_tool", [TOOLS.JOB_STOP])
-    job_button_5.connect("pressed", self, "select_tool", [TOOLS.JOB_BRIDGE])
-    job_button_6.connect("pressed", self, "select_tool", [TOOLS.JOB_DIG_HORIZONTAL])
-    job_button_7.connect("pressed", self, "select_tool", [TOOLS.JOB_MINE])
-    job_button_8.connect("pressed", self, "select_tool", [TOOLS.JOB_DIG_VERTICAL])
+    job_buttons.append(get_node("%JobButton1"))
+    job_buttons.append(get_node("%JobButton2"))
+    job_buttons.append(get_node("%JobButton3"))
+    job_buttons.append(get_node("%JobButton4"))
+    job_buttons.append(get_node("%JobButton5"))
+    job_buttons.append(get_node("%JobButton6"))
+    job_buttons.append(get_node("%JobButton7"))
+    job_buttons.append(get_node("%JobButton8"))
+    action0_button.connect("pressed", self, "select_tool", [action0_button, TOOLS.RECT_PAINT])
+    action1_button.connect("pressed", self, "select_tool", [action1_button, TOOLS.RECT_ERASE])
+    action2_button.connect("pressed", self, "select_tool", [action2_button, TOOLS.SPAWN_UNIT])
+    for index in range(0, job_buttons.size()):
+        job_buttons[index].connect("pressed", self, "select_tool", [job_buttons[index], TOOLS.values()[index + 1]])
 
     collision_image = Image.new()
 
@@ -247,14 +242,16 @@ func load_level(level: Level) -> void:
     jobs_count[JOBS.MINE] = level.job_mine
     jobs_count[JOBS.DIG_VERTICAL] = level.job_dig_vertical
 
-    job_button_1.set_data(JOBS.CLIMB, String(jobs_count[JOBS.CLIMB]))
-    job_button_2.set_data(JOBS.FLOAT, String(jobs_count[JOBS.FLOAT]))
-    job_button_3.set_data(JOBS.EXPLODE, String(jobs_count[JOBS.EXPLODE]))
-    job_button_4.set_data(JOBS.STOP, String(jobs_count[JOBS.STOP]))
-    job_button_5.set_data(JOBS.BRIDGE, String(jobs_count[JOBS.BRIDGE]))
-    job_button_6.set_data(JOBS.DIG_HORIZONTAL, String(jobs_count[JOBS.DIG_HORIZONTAL]))
-    job_button_7.set_data(JOBS.MINE, String(jobs_count[JOBS.MINE]))
-    job_button_8.set_data(JOBS.DIG_VERTICAL, String(jobs_count[JOBS.DIG_VERTICAL]))
+    var keys := jobs_count.keys()
+    var values := jobs_count.values()
+    var first_selected := false
+    for job_index in range(0, keys.size()):
+        var job_id : int = keys[job_index]
+        var count : int = jobs_count[job_id]
+        job_buttons[job_index].set_data(job_index + 1, String(count))
+        if count > 0 && first_selected == false:
+            job_buttons[job_index].grab_focus()
+            first_selected = true
 
     units.resize(units_max)
 
@@ -458,8 +455,9 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
 
     print("Used tool: %s at (%s,%s)" % [TOOLS.keys()[tool_id], x, y])
 
-func select_tool(tool_id: int) -> void:
+func select_tool(button: Button, tool_id: int) -> void:
     print("Tool selected: ", tool_id)
+    button.grab_focus()
     tool_primary = tool_id
 
 func toggle_debug() -> void: 
