@@ -56,6 +56,8 @@ onready var map_sprite : Sprite = get_node("%Map")
 onready var collision_sprite : Sprite = get_node("%Collision")
 onready var debug_label : Label = get_node("%DebugLabel")
 onready var debug_draw : Control = get_node("%DebugCanvas")
+onready var title : Title = get_node("%Title")
+onready var hud : HUD = get_node("%HUD")
 onready var transitions : Transitions = get_node("%Transitions")
 onready var action0_button : Button = get_node("%Action0")
 onready var action1_button : Button = get_node("%Action1")
@@ -106,41 +108,29 @@ var exit_position : Vector2
 var spawn_is_active : bool
 var spawn_rate : int
 var jobs_count : Dictionary
+var debug_is_visible : bool
 
 func _ready() -> void:
-    if OS.is_debug_build():
-        AudioServer.set_bus_mute(audio_bus_master, true)
-    
     now = OS.get_ticks_msec()
-
-    # Init scale
     game_scale = GAME_SCALE
     scaler_node.scale = Vector2(game_scale, game_scale)
 
-    set_cursor(CURSOR_DEFAULT)
+    set_toggle_debug_visibility(false)
+    if OS.is_debug_build():
+        AudioServer.set_bus_mute(audio_bus_master, true)
 
-    # Init UI
-    toggle_debug()
-    action0_button.connect("pressed", self, "select_tool", [action0_button, TOOLS.RECT_PAINT])
-    action1_button.connect("pressed", self, "select_tool", [action1_button, TOOLS.RECT_ERASE])
-    action2_button.connect("pressed", self, "select_tool", [action2_button, TOOLS.SPAWN_UNIT])
-    for index in range(0, job_buttons.size()):
-        job_buttons[index].connect("pressed", self, "select_tool", [job_buttons[index], TOOLS.values()[index + 1]])
-
-    collision_image = Image.new()
-
-    # Load and start the level
-    load_level(config.levels[current_level])
-    yield(self, "level_loaded")
-    is_ticking = true
-    start_level()
+    title.open()
+    var action = yield(title, "action_selected")
+    match action:
+        0: start_game()
+        1: quit_game()
  
 func _process(delta: float) -> void:
     now += delta * 1000 # Delta is in seconds, now in Milliseconds
 
     if Input.is_action_just_released("debug_1"):
         print("Toggling debug mode")
-        toggle_debug()
+        set_toggle_debug_visibility(!debug_is_visible)
         
     if Input.is_action_just_released("debug_2"):
         print("Toggling map")
@@ -169,55 +159,80 @@ func _process(delta: float) -> void:
         is_ticking = true
         start_level()
 
-    if Input.is_action_just_released("ui_down"):
-        spawn_rate = clamp(spawn_rate + 10, 10, 100)
-    if Input.is_action_just_released("ui_up"):
-        spawn_rate = clamp(spawn_rate - 10, 10, 100)
-    if Input.is_action_pressed("ui_left"):
-        camera.position.x = clamp(camera.position.x - 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
-    if Input.is_action_pressed("ui_right"):
-        camera.position.x = clamp(camera.position.x + 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
-
-    if Input.is_action_just_released("ui_accept"):
-        game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
-        scaler_node.scale = Vector2(game_scale, game_scale)
-
-    if Input.is_key_pressed(KEY_SHIFT):
-        Engine.time_scale = TIME_SCALE * 6
-    else:
-        Engine.time_scale = TIME_SCALE
-        
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
-    var mouse_map_position = get_mouse_position()
+    if is_ticking:
+        if Input.is_action_just_released("ui_down"):
+            spawn_rate = clamp(spawn_rate + 10, 10, 100)
+        if Input.is_action_just_released("ui_up"):
+            spawn_rate = clamp(spawn_rate - 10, 10, 100)
+        if Input.is_action_pressed("ui_left"):
+            camera.position.x = clamp(camera.position.x - 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
+        if Input.is_action_pressed("ui_right"):
+            camera.position.x = clamp(camera.position.x + 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
 
-    # Update cursor
-    var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
-    if unit_index > -1:
-        set_cursor(CURSOR_BORDER)
-    else:
-        set_cursor(CURSOR_DEFAULT)
+        if Input.is_action_just_released("ui_accept"):
+            game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
+            scaler_node.scale = Vector2(game_scale, game_scale)
 
-    if Input.is_mouse_button_pressed(BUTTON_LEFT):
-        use_tool(tool_primary, mouse_map_position.x, mouse_map_position.y, true)
-    elif Input.is_mouse_button_pressed(BUTTON_RIGHT):
-        use_tool(tool_secondary, mouse_map_position.x, mouse_map_position.y, true)
-    elif Input.is_mouse_button_pressed(BUTTON_MIDDLE):
-        use_tool(tool_tertiary, mouse_map_position.x, mouse_map_position.y, true)
+        if Input.is_key_pressed(KEY_SHIFT):
+            Engine.time_scale = TIME_SCALE * 6
+        else:
+            Engine.time_scale = TIME_SCALE
 
-    debug_label.set_text(JSON.print({ 
-        "FPS": Performance.get_monitor(Performance.TIME_FPS),
-        "Scale": game_scale,
-        "Units": "%s / %s" % [units_spawned, units.size()],
-        "Spawn rate": spawn_rate,
-        "Goal": "%s / %s" % [units_exited, units_goal],
-        "Jobs": jobs_count,
-    }, "  "))
+        var mouse_map_position = get_mouse_position()
 
-    if now >= next_tick_at:
-        tick()
-        next_tick_at = now + TICK_SPEED
+        # Update cursor
+        var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
+        if unit_index > -1:
+            set_cursor(CURSOR_BORDER)
+        else:
+            set_cursor(CURSOR_DEFAULT)
+
+        if Input.is_mouse_button_pressed(BUTTON_LEFT):
+            use_tool(tool_primary, mouse_map_position.x, mouse_map_position.y, true)
+        elif Input.is_mouse_button_pressed(BUTTON_RIGHT):
+            use_tool(tool_secondary, mouse_map_position.x, mouse_map_position.y, true)
+        elif Input.is_mouse_button_pressed(BUTTON_MIDDLE):
+            use_tool(tool_tertiary, mouse_map_position.x, mouse_map_position.y, true)
+
+        debug_label.set_text(JSON.print({ 
+            "FPS": Performance.get_monitor(Performance.TIME_FPS),
+            "Scale": game_scale,
+            "Units": "%s / %s" % [units_spawned, units.size()],
+            "Spawn rate": spawn_rate,
+            "Goal": "%s / %s" % [units_exited, units_goal],
+            "Jobs": jobs_count,
+        }, "  "))
+
+        if now >= next_tick_at:
+            tick()
+            next_tick_at = now + TICK_SPEED
+
+func start_game() -> void:
+    title.close()
+    yield(title, "closed")
+    
+    transitions.open(0.1)
+    yield(transitions, "opened")
+
+    set_cursor(CURSOR_DEFAULT)
+
+    # Init UI
+    action0_button.connect("pressed", self, "select_tool", [action0_button, TOOLS.RECT_PAINT])
+    action1_button.connect("pressed", self, "select_tool", [action1_button, TOOLS.RECT_ERASE])
+    action2_button.connect("pressed", self, "select_tool", [action2_button, TOOLS.SPAWN_UNIT])
+    for index in range(0, job_buttons.size()):
+        job_buttons[index].connect("pressed", self, "select_tool", [job_buttons[index], TOOLS.values()[index + 1]])
+
+    collision_image = Image.new()
+
+    # Load and start the level
+    load_level(config.levels[current_level])
+    yield(self, "level_loaded")
+    is_ticking = true
+    start_level()
 
 func get_mouse_position() -> Vector2 :
     return camera.get_local_mouse_position() + camera.position
@@ -350,6 +365,9 @@ func start_level() -> void:
     camera.position.y = level.camera_y
     spawn_is_active = false
 
+    hud.open()
+    yield(hud, "opened")
+
     transitions.close()
     yield(transitions, "closed")
 
@@ -480,10 +498,11 @@ func select_tool(button: Button, tool_id: int) -> void:
     button.grab_focus()
     tool_primary = tool_id
 
-func toggle_debug() -> void: 
-    collision_sprite.visible = !collision_sprite.visible
-    debug_draw.visible = !debug_draw.visible
-    debug_label.visible = !debug_label.visible
+func set_toggle_debug_visibility(value: bool) -> void:
+    collision_sprite.visible = value
+    debug_draw.visible = value
+    debug_label.visible = value
+    debug_is_visible = value
 
 func tick() -> void: 
     if not is_ticking:
@@ -737,6 +756,7 @@ func quit_game() -> void:
     print("Quitting game...")
     get_tree().quit()
 
+# TODO: Don't do collision update if not in debug mode
 func update_map(x: int, y: int, width: int, height: int) -> void:
     # print("update_map: ", [x, y, width, height])
     var start := OS.get_ticks_usec()

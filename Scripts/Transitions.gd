@@ -13,19 +13,16 @@ onready var rects : Array = [
     get_node("%Rect5"),
 ]
 
-func _ready() -> void:
-    pass
-
-func open(color: Color = Color.black) -> void :
+func open(duration: float = 1.0, color: Color = Color.black) -> void:
     var tween := create_tween()
 
     for rect in rects:
-        tween.parallel().tween_property(rect, "rect_position", Vector2(0, rect.rect_position.y), 1)
+        tween.parallel().tween_property(rect, "rect_position", Vector2(0, rect.rect_position.y), duration)
 
     yield(tween, "finished")
     emit_signal("opened")
     
-func close() -> void :
+func close(duration: float = 1.0) -> void:
     var tween := create_tween()
 
     for rect_index in range(0, rects.size()):
@@ -33,7 +30,7 @@ func close() -> void :
         var x := rect.rect_size.x
         if rect_index % 2:
             x = -rect.rect_size.x
-        tween.parallel().tween_property(rect, "rect_position", Vector2(x, rect.rect_position.y), 1)
+        tween.parallel().tween_property(rect, "rect_position", Vector2(x, rect.rect_position.y), duration)
 
     yield(tween, "finished")
     emit_signal("closed")
