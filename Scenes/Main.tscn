@@ -75,8 +75,8 @@ script = ExtResource( 5 )
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 1920.0
-margin_right = 1920.0
+margin_left = 1925.0
+margin_right = 1935.0
 margin_bottom = -900.0
 color = Color( 0, 0, 0, 1 )
 
@@ -84,9 +84,9 @@ color = Color( 0, 0, 0, 1 )
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = -1920.0
+margin_left = 1925.0
 margin_top = 180.0
-margin_right = -1920.0
+margin_right = 1935.0
 margin_bottom = -720.0
 color = Color( 0, 0, 0, 1 )
 
@@ -94,9 +94,9 @@ color = Color( 0, 0, 0, 1 )
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 1920.0
+margin_left = 1925.0
 margin_top = 360.0
-margin_right = 1920.0
+margin_right = 1935.0
 margin_bottom = -540.0
 color = Color( 0, 0, 0, 1 )
 
@@ -104,9 +104,9 @@ color = Color( 0, 0, 0, 1 )
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = -1920.0
+margin_left = 1925.0
 margin_top = 540.0
-margin_right = -1920.0
+margin_right = 1935.0
 margin_bottom = -360.0
 color = Color( 0, 0, 0, 1 )
 
@@ -114,9 +114,9 @@ color = Color( 0, 0, 0, 1 )
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = 1920.0
+margin_left = 1925.0
 margin_top = 720.0
-margin_right = 1920.0
+margin_right = 1935.0
 margin_bottom = -180.0
 color = Color( 0, 0, 0, 1 )
 
@@ -124,9 +124,9 @@ color = Color( 0, 0, 0, 1 )
 unique_name_in_owner = true
 anchor_right = 1.0
 anchor_bottom = 1.0
-margin_left = -1920.0
+margin_left = 1925.0
 margin_top = 900.0
-margin_right = -1920.0
+margin_right = 1935.0
 color = Color( 0, 0, 0, 1 )
 
 [node name="HUD" type="CanvasLayer" parent="."]

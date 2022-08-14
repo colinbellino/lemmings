@@ -214,7 +214,7 @@ func start_game() -> void:
     title.close()
     yield(title, "closed")
     
-    transitions.open(0.1)
+    transitions.open(0.0)
     yield(transitions, "opened")
 
     set_cursor(CURSOR_DEFAULT)
