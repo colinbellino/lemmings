@@ -1,6 +1,8 @@
 class_name Unit
 extends AnimatedSprite
 
+onready var label = get_node("%Label")
+
 enum STATES {
     WALKING = 0,
     FALLING = 1,
@@ -30,3 +32,6 @@ func get_bounds() -> Rect2:
 
 func has_job(flag: int) -> bool: 
     return jobs.has(flag) && jobs[flag] != null
+
+func set_text(value: String) -> void:
+    label.text = value

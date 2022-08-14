@@ -1,5 +1,6 @@
-[gd_scene load_steps=88 format=2]
+[gd_scene load_steps=89 format=2]
 
+[ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=1]
 [ext_resource path="res://Scripts/Unit.gd" type="Script" id=2]
 [ext_resource path="res://Art/unit.png" type="Texture" id=3]
 
@@ -386,7 +387,18 @@ animations = [ {
 z_index = 1
 frames = SubResource( 10 )
 animation = "block"
-frame = 8
+frame = 1
 playing = true
 offset = Vector2( 0, -2 )
 script = ExtResource( 2 )
+
+[node name="Label" type="Label" parent="."]
+unique_name_in_owner = true
+margin_left = -6.0
+margin_top = -18.0
+margin_right = 26.0
+margin_bottom = 14.0
+rect_scale = Vector2( 0.4, 0.4 )
+custom_fonts/font = ExtResource( 1 )
+text = "5"
+align = 1

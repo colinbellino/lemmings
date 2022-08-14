@@ -46,7 +46,7 @@ func add_rect(rect: Rect2, color: Color) -> void:
 
     _updated = true
 
-func add_text(pos: Vector2, text: String, color: Color) -> void:
+func add_text(pos: Vector2, text: String, color: Color = Color.white) -> void:
     if _texts_count >= _texts.size():
         # printerr("Maximum texts drawn (%s)" % _texts.size())
         return

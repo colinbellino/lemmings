@@ -1,6 +1,6 @@
 [gd_scene load_steps=4 format=2]
 
-[ext_resource path="res://Art/jobs.png" type="Texture" id=1]
+[ext_resource path="res://Art/tools.png" type="Texture" id=1]
 [ext_resource path="res://Scripts/JobButton.gd" type="Script" id=2]
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=3]
 
@@ -26,8 +26,8 @@ align = 1
 
 [node name="Sprite" type="Sprite" parent="."]
 unique_name_in_owner = true
-position = Vector2( 31, 64 )
+position = Vector2( 31, 40 )
 scale = Vector2( 2, 2 )
 texture = ExtResource( 1 )
 region_enabled = true
-region_rect = Rect2( 128, 0, 16, 24 )
+region_rect = Rect2( 128, 0, 16, 48 )

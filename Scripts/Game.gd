@@ -1,5 +1,5 @@
-extends Node2D
 class_name Game
+extends Node2D
 
 enum JOBS {
     NONE = 1 << 0,
@@ -26,6 +26,7 @@ enum TOOLS {
     RECT_PAINT = 9,
     RECT_ERASE = 10,
     SPAWN_UNIT = 11,
+    EXPLODE_ALL = 12,
 }
 
 enum PIXELS {
@@ -43,6 +44,8 @@ const TIME_SCALE : int = 1
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
 const JOB_DIG_DURATION : int = 300
+const JOB_EXPLODE_DURATION : int = 100
+const JOB_EXPLODE_STEP : int = 20
 const JOB_FLOAT_DELAY : int = 10
 const FALL_DURATION_FATAL : int = 55
 const FALL_DURATION_FLOAT : int = 25
@@ -65,16 +68,6 @@ onready var transitions : Transitions = get_node("%Transitions")
 onready var action0_button : Button = get_node("%Action0")
 onready var action1_button : Button = get_node("%Action1")
 onready var action2_button : Button = get_node("%Action2")
-onready var job_buttons : Array = [
-    get_node("%JobButton1"),
-    get_node("%JobButton2"),
-    get_node("%JobButton3"),
-    get_node("%JobButton4"),
-    get_node("%JobButton5"),
-    get_node("%JobButton6"),
-    get_node("%JobButton7"),
-    get_node("%JobButton8"),
-]
 onready var units_spawned_label : Label = get_node("%UnitsSpawnedLabel")
 onready var units_exited_label : Label = get_node("%UnitsExitedLabel")
 onready var units_dead_label : Label = get_node("%UnitsDeadLabel")
@@ -121,6 +114,8 @@ func _ready() -> void:
     set_toggle_debug_visibility(false)
     if OS.is_debug_build():
         AudioServer.set_bus_mute(audio_bus_master, true)
+        start_game()
+        return
 
     title.open()
     var action = yield(title, "action_selected")
@@ -223,11 +218,10 @@ func start_game() -> void:
     set_cursor(CURSOR_DEFAULT)
 
     # Init UI
-    action0_button.connect("pressed", self, "select_tool", [action0_button, TOOLS.RECT_PAINT])
-    action1_button.connect("pressed", self, "select_tool", [action1_button, TOOLS.RECT_ERASE])
-    action2_button.connect("pressed", self, "select_tool", [action2_button, TOOLS.SPAWN_UNIT])
-    for index in range(0, job_buttons.size()):
-        job_buttons[index].connect("pressed", self, "select_tool", [job_buttons[index], TOOLS.values()[index + 1]])
+    action0_button.connect("pressed", self, "select_tool", [TOOLS.RECT_PAINT])
+    action1_button.connect("pressed", self, "select_tool", [TOOLS.RECT_ERASE])
+    action2_button.connect("pressed", self, "select_tool", [TOOLS.SPAWN_UNIT])
+    hud.connect("tool_selected", self, "use_tool_no_position")
 
     collision_image = Image.new()
 
@@ -270,14 +264,12 @@ func load_level(level: Level) -> void:
     jobs_count[JOBS.DIG_VERTICAL] = level.job_dig_vertical
 
     var keys := jobs_count.keys()
-    var values := jobs_count.values()
     var first_selected := false
     for job_index in range(0, keys.size()):
         var job_id : int = keys[job_index]
         var count : int = jobs_count[job_id]
-        job_buttons[job_index].set_data(job_index + 1, String(count))
         if count > 0 && first_selected == false:
-            select_tool(job_buttons[job_index], job_index + 1)
+            select_tool(job_index + 1)
             first_selected = true
 
     units.resize(units_max)
@@ -369,6 +361,12 @@ func start_level() -> void:
     spawn_is_active = false
 
     hud.open()
+    var keys := jobs_count.keys()
+    for job_index in range(0, keys.size()):
+        var job_id : int = keys[job_index]
+        var count : int = jobs_count[job_id]
+        hud.set_job_button_data(job_index + 1, String(count))
+    
     yield(hud, "opened")
 
     transitions.close()
@@ -422,26 +420,38 @@ func set_cursor(cursor_id: int) -> void:
 
     Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
 
+func use_tool_no_position(tool_id: int) -> void:
+    use_tool(tool_id, 0, 0, false)
+    
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
-    if not is_in_bounds(x, y):
-        return
-
     match tool_id:
         TOOLS.RECT_ERASE:
+            if not is_in_bounds(x, y):
+                return
+
             var size = 20
             erase_rect(x - size / 2, y - size / 2, size, size)
 
         TOOLS.RECT_PAINT:
+            if not is_in_bounds(x, y):
+                return
+                
             var size = 20
             paint_rect(x - size / 2, y - size / 2, size, size, PIXELS.BLOCK | PIXELS.PAINT)
 
         TOOLS.SPAWN_UNIT:
+            if not is_in_bounds(x, y):
+                return
+
             if not pressed:
                 if not has_flag(x, y, PIXELS.BLOCK):
                     var unit := spawn_unit(x, y)
                     print("%s spawned" % unit.name)
 
         TOOLS.JOB_DIG_VERTICAL:
+            if not is_in_bounds(x, y):
+                return
+
             if pressed:
                 return
             
@@ -465,6 +475,9 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             jobs_count[JOBS.DIG_VERTICAL] -= 1
 
         TOOLS.JOB_BLOCK:
+            if not is_in_bounds(x, y):
+                return
+                
             if pressed:
                 return
             
@@ -488,6 +501,9 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             jobs_count[JOBS.BLOCK] -= 1
 
         TOOLS.JOB_FLOAT:
+            if not is_in_bounds(x, y):
+                return
+
             if pressed:
                 return
 
@@ -510,6 +526,24 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             audio_player_sound.play()
             jobs_count[JOBS.FLOAT] -= 1
 
+        TOOLS.EXPLODE_ALL:
+            if pressed:
+                return
+
+            spawn_is_active = false
+
+            for unit_index in range(0, units_spawned):
+                var unit : Unit = units[unit_index]
+                var jobs = unit.jobs
+                jobs[JOBS.EXPLODE] = {
+                    duration = JOB_EXPLODE_DURATION,
+                    started_at = now_tick,
+                }
+                unit.jobs = jobs
+
+            audio_player_sound.stream = config.sound_assign_job
+            audio_player_sound.play()
+
         _:
             if pressed:
                 return
@@ -519,10 +553,11 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
 
     print("Used tool: %s at (%s,%s)" % [TOOLS.keys()[tool_id], x, y])
 
-func select_tool(button: Button, tool_id: int) -> void:
+func select_tool(tool_id: int) -> void:
     print("Tool selected: ", TOOLS.keys()[tool_id])
-    button.grab_focus()
     tool_primary = tool_id
+    if tool_id < JOBS.size():
+        hud.select_job(tool_id)
 
 func set_toggle_debug_visibility(value: bool) -> void:
     collision_sprite.visible = value
@@ -551,8 +586,8 @@ func tick() -> void:
                 if unit.has_job(job_id):
                     jobs_str += "%s " % JOBS.keys()[job_index]
 
-            debug_draw.add_text(unit.position + Vector2(-5, -10), Unit.STATES.keys()[unit.state], Color.white)
-            debug_draw.add_text(unit.position + Vector2(-5, -7), jobs_str, Color.white)
+            debug_draw.add_text(unit.position + Vector2(-5, -10), Unit.STATES.keys()[unit.state])
+            debug_draw.add_text(unit.position + Vector2(-5, -7), jobs_str)
 
         if unit.status != Unit.STATUSES.ACTIVE:
             continue
@@ -579,6 +614,21 @@ func tick() -> void:
         # TODO: Check if we can walk down a pixel before falling
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
+
+        if unit.has_job(JOBS.EXPLODE):
+            var job = unit.jobs[JOBS.EXPLODE]
+            if (now_tick - job.started_at) % JOB_EXPLODE_STEP == 0:
+                var unit_rect := unit.get_bounds()
+                var countdown : int = JOB_EXPLODE_DURATION / JOB_EXPLODE_STEP - (now_tick - job.started_at) / JOB_EXPLODE_STEP
+                debug_draw.add_rect(unit_rect, Color.red)
+                unit.set_text(String(countdown))
+
+                var is_done : int = now_tick >= job.started_at + job.duration
+                if is_done:
+                    var _did_erase = unit.jobs.erase(JOBS.EXPLODE)
+                    unit.state = Unit.STATES.DEAD
+                    unit.state_entered_at = now_tick
+                    unit.set_text("")
 
         match unit.state:
             Unit.STATES.FALLING:
@@ -691,7 +741,7 @@ func tick() -> void:
         if unit.status == Unit.STATUSES.DEAD:
             units_dead += 1
 
-    if units_dead + units_exited == units_max:
+    if units_dead + units_exited == units_max   :
         is_ticking = false
 
         if units_exited >= units_goal:
@@ -736,6 +786,7 @@ func spawn_unit(x: int, y: int) -> Unit:
 
     units[units_spawned] = unit
     scaler_node.add_child(unit)
+    unit.set_text("")
 
     units_spawned += 1
 

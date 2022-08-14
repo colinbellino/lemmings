@@ -129,6 +129,47 @@ margin_top = 900.0
 margin_right = 1935.0
 color = Color( 0, 0, 0, 1 )
 
+[node name="Title" type="CanvasLayer" parent="."]
+unique_name_in_owner = true
+layer = 2
+visible = false
+script = ExtResource( 6 )
+
+[node name="Root" type="Control" parent="Title"]
+margin_right = 40.0
+margin_bottom = 40.0
+
+[node name="Sprite" type="Sprite" parent="Title/Root"]
+scale = Vector2( 6, 6 )
+texture = ExtResource( 7 )
+centered = false
+
+[node name="Start" type="Button" parent="Title/Root"]
+unique_name_in_owner = true
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = 868.0
+margin_top = 684.0
+margin_right = 1012.0
+margin_bottom = 732.0
+custom_fonts/font = ExtResource( 4 )
+text = "Start"
+
+[node name="Quit" type="Button" parent="Title/Root"]
+unique_name_in_owner = true
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+margin_left = 868.0
+margin_top = 744.0
+margin_right = 1012.0
+margin_bottom = 792.0
+custom_fonts/font = ExtResource( 4 )
+text = "Quit"
+
 [node name="HUD" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
 script = ExtResource( 8 )
@@ -177,6 +218,17 @@ unique_name_in_owner = true
 margin_left = 576.0
 margin_right = 640.0
 
+[node name="ExplodeButton" parent="HUD/Root" instance=ExtResource( 3 )]
+unique_name_in_owner = true
+margin_left = 656.0
+margin_right = 720.0
+
+[node name="Label" parent="HUD/Root/ExplodeButton" index="0"]
+text = ""
+
+[node name="Sprite" parent="HUD/Root/ExplodeButton" index="1"]
+region_rect = Rect2( 144, 0, 16, 48 )
+
 [node name="UnitsSpawnedLabel" type="Label" parent="HUD/Root"]
 unique_name_in_owner = true
 margin_left = 1806.0
@@ -207,46 +259,6 @@ custom_fonts/font = ExtResource( 4 )
 text = "Dead: 99"
 align = 2
 
-[node name="Title" type="CanvasLayer" parent="."]
-unique_name_in_owner = true
-layer = 2
-script = ExtResource( 6 )
-
-[node name="Root" type="Control" parent="Title"]
-margin_right = 40.0
-margin_bottom = 40.0
-
-[node name="Sprite" type="Sprite" parent="Title/Root"]
-scale = Vector2( 6, 6 )
-texture = ExtResource( 7 )
-centered = false
-
-[node name="Start" type="Button" parent="Title/Root"]
-unique_name_in_owner = true
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-margin_left = 868.0
-margin_top = 684.0
-margin_right = 1012.0
-margin_bottom = 732.0
-custom_fonts/font = ExtResource( 4 )
-text = "Start"
-
-[node name="Quit" type="Button" parent="Title/Root"]
-unique_name_in_owner = true
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-margin_left = 868.0
-margin_top = 744.0
-margin_right = 1012.0
-margin_bottom = 792.0
-custom_fonts/font = ExtResource( 4 )
-text = "Quit"
-
 [node name="Scaler" type="Node2D" parent="."]
 unique_name_in_owner = true
 
@@ -271,3 +283,5 @@ bus = "Music"
 [node name="SoundAudioPlayer" type="AudioStreamPlayer" parent="."]
 unique_name_in_owner = true
 bus = "Sounds"
+
+[editable path="HUD/Root/ExplodeButton"]
