@@ -33,7 +33,6 @@ func close(duration: float = 0.75) -> void:
         if rect_index % 2:
             x = -rect.rect_size.x
         tween.parallel().tween_property(rect, "rect_position:x", x, duration)
-        print(x)
 
     yield(tween, "finished")
     emit_signal("closed")

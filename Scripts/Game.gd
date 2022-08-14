@@ -6,7 +6,7 @@ enum JOBS {
     CLIMB = 1 << 1,
     FLOAT = 1 << 2,
     EXPLODE = 1 << 3,
-    STOP = 1 << 4, 
+    BLOCK = 1 << 4, 
     BRIDGE = 1 << 5,
     DIG_HORIZONTAL = 1 << 6,
     MINE = 1 << 7,
@@ -18,7 +18,7 @@ enum TOOLS {
     JOB_CLIMB = 1,
     JOB_FLOAT = 2,
     JOB_EXPLODE = 3,
-    JOB_STOP = 4,
+    JOB_BLOCK = 4,
     JOB_BRIDGE = 5,
     JOB_DIG_HORIZONTAL = 6,
     JOB_MINE = 7,
@@ -260,7 +260,7 @@ func load_level(level: Level) -> void:
     jobs_count[JOBS.CLIMB] = level.job_climb
     jobs_count[JOBS.FLOAT] = level.job_float
     jobs_count[JOBS.EXPLODE] = level.job_explode
-    jobs_count[JOBS.STOP] = level.job_stop
+    jobs_count[JOBS.BLOCK] = level.job_stop
     jobs_count[JOBS.BRIDGE] = level.job_bridge
     jobs_count[JOBS.DIG_HORIZONTAL] = level.job_dig_horizontal
     jobs_count[JOBS.MINE] = level.job_mine
@@ -461,6 +461,29 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             audio_player_sound.play()
             jobs_count[JOBS.DIG_VERTICAL] -= 1
 
+        TOOLS.JOB_BLOCK:
+            if pressed:
+                return
+            
+            if jobs_count[JOBS.BLOCK] < 1:
+                return
+
+            var unit_index := get_unit_at(x, y)
+            if unit_index == -1:
+                return
+                
+            var unit : Unit = units[unit_index]
+            if unit.has_job(JOBS.BLOCK):
+                return
+
+            unit.jobs[JOBS.BLOCK] = {
+                duration = -1,
+                started_at = now_tick,
+            }
+            audio_player_sound.stream = config.sound_assign_job
+            audio_player_sound.play()
+            jobs_count[JOBS.BLOCK] -= 1
+
         TOOLS.JOB_FLOAT:
             if pressed:
                 return
@@ -586,14 +609,24 @@ func tick() -> void:
                 if is_grounded:
                     if unit.has_job(JOBS.DIG_VERTICAL):
                         unit.play("dig")
-                        if (now_tick - unit.state_entered_at) % 10 == 0:
-                            var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y + 3, unit.width, 3)
+                        var job = unit.jobs[JOBS.DIG_VERTICAL]
+                        if (now_tick - job.started_at) % 10 == 0:
+                            var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y, unit.width, 6)
                             debug_draw.add_rect(unit_rect, Color.red)
                             erase_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
     
-                            var is_not_done := now_tick < unit.state_entered_at + JOB_DIG_DURATION
+                            var is_not_done : int = now_tick < job.started_at + job.duration
                             if is_not_done:
                                 destination.y += 1
+
+                    elif unit.has_job(JOBS.BLOCK):
+                        var job = unit.jobs[JOBS.BLOCK]
+                        if now_tick == job.started_at:
+                            unit.play("block")
+                            var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, unit.width, unit.height)
+                            debug_draw.add_rect(unit_rect, Color.red)
+                            paint_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
+
                     else:
                         var wall_check_pos_x : int = unit.position.x + unit.direction
                         var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1

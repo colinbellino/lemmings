@@ -17,6 +17,7 @@ enum STATUSES {
 var status : int
 var state : int
 var state_entered_at : int
+# { started_at: int, duration: int }
 var jobs : Dictionary = {}
 var width : int = 8
 var height : int = 10
