@@ -28,15 +28,18 @@ enum TOOLS {
     SPAWN_UNIT = 11,
 }
 
+enum PIXELS {
+    EMPTY = 1 << 0
+    BLOCK = 1 << 1
+    PAINT = 1 << 2
+}
+
 signal level_unloaded
 signal level_loaded
 
 const GAME_SCALE : int = 6
 const TICK_SPEED : int = 50
 const TIME_SCALE : int = 1
-const PIXEL_EMPTY : int = 0
-const PIXEL_BLOCK : int = 1 << 1
-const PIXEL_PAINT : int = 1 << 2
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
 const JOB_DIG_DURATION : int = 300
@@ -292,15 +295,15 @@ func load_level(level: Level) -> void:
         for x in range(0, map_width):
             var index := calculate_index(x, y, map_width) 
             var color := map_image.get_pixel(x, y)
-            var value := PIXEL_EMPTY
+            var value : int = PIXELS.EMPTY
             if color.a > 0:
-                value = PIXEL_BLOCK
+                value = PIXELS.BLOCK
             if color.is_equal_approx(config.exit_color):
                 exit_position = Vector2(x, y)
-                value = PIXEL_EMPTY
+                value = PIXELS.EMPTY
             if color.is_equal_approx(config.entrance_color):
                 entrance_position = Vector2(x, y)
-                value = PIXEL_EMPTY
+                value = PIXELS.EMPTY
             map_data.set(index, value)
     map_image.unlock()
 
@@ -430,11 +433,11 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
 
         TOOLS.RECT_PAINT:
             var size = 20
-            paint_rect(x - size / 2, y - size / 2, size, size, PIXEL_BLOCK | PIXEL_PAINT)
+            paint_rect(x - size / 2, y - size / 2, size, size, PIXELS.BLOCK | PIXELS.PAINT)
 
         TOOLS.SPAWN_UNIT:
             if not pressed:
-                if not has_flag(x, y, PIXEL_BLOCK):
+                if not has_flag(x, y, PIXELS.BLOCK):
                     var unit := spawn_unit(x, y)
                     print("%s spawned" % unit.name)
 
@@ -574,7 +577,7 @@ func tick() -> void:
         # debug_draw.add_rect(unit.get_bounds(), Color.green)
 
         # TODO: Check if we can walk down a pixel before falling
-        var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXEL_BLOCK)
+        var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
 
         match unit.state:
@@ -625,7 +628,7 @@ func tick() -> void:
                         debug_draw.add_rect(unit_rect, Color.red)
                         if now_tick == job.started_at:
                             unit.play("block")
-                            paint_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y, PIXEL_BLOCK)
+                            paint_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y, PIXELS.BLOCK)
 
                     else:
                         var wall_check_pos_x : int = unit.position.x + unit.direction
@@ -636,7 +639,7 @@ func tick() -> void:
                         for offset_y in range(0, -unit.climb_step, -1):
                             var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
                             debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
-                            hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXEL_BLOCK)
+                            hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXELS.BLOCK)
 
                             if not hit_wall:
                                 destination_offset_y = offset_y
@@ -650,7 +653,7 @@ func tick() -> void:
                             for offset_y in range(1, unit.climb_step):
                                 var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
                                 debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
-                                if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXEL_BLOCK):
+                                if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXELS.BLOCK):
                                     break
                                 destination_offset_y = offset_y
 
@@ -753,7 +756,7 @@ func erase_rect(origin_x: int, origin_y: int, width: int, height: int) -> void:
         return
 
     for index in pixels_to_delete:
-        map_data[index] = PIXEL_EMPTY
+        map_data[index] = PIXELS.EMPTY
 
     update_map(origin_x, origin_y, width, height)
     
@@ -808,13 +811,13 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
             var pos_y := index / map_width
             
             var collision_color := Color.transparent
-            if pixel != PIXEL_EMPTY:
+            if pixel != PIXELS.EMPTY:
                 collision_color = Color.red
             collision_image.set_pixel(pos_x, pos_y, collision_color)
 
-            if pixel == PIXEL_EMPTY:
+            if pixel == PIXELS.EMPTY:
                 map_image.set_pixel(pos_x, pos_y, Color.transparent)
-            elif has_flag(pos_x, pos_y, PIXEL_PAINT):
+            elif has_flag(pos_x, pos_y, PIXELS.PAINT):
                 map_image.set_pixel(pos_x, pos_y, Color.blue)
 
             count += 1
