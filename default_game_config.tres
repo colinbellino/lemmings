@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=17 format=2]
+[gd_resource type="Resource" load_steps=18 format=2]
 
 [ext_resource path="res://Scripts/GameConfig.gd" type="Script" id=1]
 [ext_resource path="res://Levels/level_00.tres" type="Resource" id=2]
@@ -7,6 +7,7 @@
 [ext_resource path="res://Art/cursor_default_x4.png" type="Texture" id=5]
 [ext_resource path="res://Art/cursor_border_x4.png" type="Texture" id=6]
 [ext_resource path="res://Levels/level_02.tres" type="Resource" id=7]
+[ext_resource path="res://Audio/Sounds/EXPLODE.WAV" type="AudioStream" id=8]
 [ext_resource path="res://Art/cursor_border_x2.png" type="Texture" id=9]
 [ext_resource path="res://Art/cursor_default_x1.png" type="Texture" id=10]
 [ext_resource path="res://Art/cursor_default_x2.png" type="Texture" id=11]
@@ -35,3 +36,4 @@ sound_door_open = ExtResource( 18 )
 sound_yippee = ExtResource( 13 )
 sound_splat = ExtResource( 14 )
 sound_assign_job = ExtResource( 15 )
+sound_explode = ExtResource( 8 )

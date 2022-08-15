@@ -86,6 +86,8 @@ var tool_primary : int = TOOLS.JOB_DIG_VERTICAL
 var tool_secondary : int = TOOLS.RECT_ERASE
 var tool_tertiary : int = TOOLS.RECT_PAINT
 var mouse_button_pressed : int
+var debug_is_visible : bool
+var explosion_at : int
 
 # Level data
 var units : Array = []
@@ -104,7 +106,6 @@ var exit_position : Vector2
 var spawn_is_active : bool
 var spawn_rate : int
 var jobs_count : Dictionary
-var debug_is_visible : bool
 
 func _ready() -> void:
     now = OS.get_ticks_msec()
@@ -372,15 +373,13 @@ func start_level() -> void:
     transitions.close()
     yield(transitions, "closed")
 
-    audio_player_sound.stream = config.sound_door_open
-    audio_player_sound.play()
+    play_sound(config.sound_door_open)
 
     entrance_node.play("opening")
     yield(entrance_node, "animation_finished")
     spawn_is_active = true
 
-    audio_player_sound.stream = config.sound_start
-    audio_player_sound.play()
+    play_sound(config.sound_start)
 
     yield(get_tree().create_timer(2), "timeout")
 
@@ -470,8 +469,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 duration = JOB_DIG_DURATION,
                 started_at = now_tick,
             }
-            audio_player_sound.stream = config.sound_assign_job
-            audio_player_sound.play()
+            play_sound(config.sound_assign_job)
             jobs_count[JOBS.DIG_VERTICAL] -= 1
 
         TOOLS.JOB_BLOCK:
@@ -496,8 +494,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 duration = -1,
                 started_at = now_tick,
             }
-            audio_player_sound.stream = config.sound_assign_job
-            audio_player_sound.play()
+            play_sound(config.sound_assign_job)
             jobs_count[JOBS.BLOCK] -= 1
 
         TOOLS.JOB_FLOAT:
@@ -522,8 +519,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 duration = -1,
                 started_at = now_tick,
             }
-            audio_player_sound.stream = config.sound_assign_job
-            audio_player_sound.play()
+            play_sound(config.sound_assign_job)
             jobs_count[JOBS.FLOAT] -= 1
 
         TOOLS.EXPLODE_ALL:
@@ -531,6 +527,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
 
             spawn_is_active = false
+            explosion_at = now_tick + JOB_EXPLODE_DURATION + JOB_EXPLODE_STEP
 
             for unit_index in range(0, units_spawned):
                 var unit : Unit = units[unit_index]
@@ -541,8 +538,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 }
                 unit.jobs = jobs
 
-            audio_player_sound.stream = config.sound_assign_job
-            audio_player_sound.play()
+            play_sound(config.sound_assign_job)
 
         _:
             if pressed:
@@ -580,7 +576,6 @@ func tick() -> void:
 
         if OS.is_debug_build():
             var jobs_str := ""
-
             for job_index in range(0, JOBS.size()):
                 var job_id : int = JOBS.values()[job_index]
                 if unit.has_job(job_id):
@@ -598,15 +593,13 @@ func tick() -> void:
 
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             # print("%s: OOB" % unit.name)
-            unit.state = Unit.STATES.DEAD
+            unit.state = Unit.STATES.DEAD_FALL
             unit.state_entered_at = now_tick
 
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
             unit.status = Unit.STATUSES.EXITED
-            audio_player_sound.stream = config.sound_yippee
-            audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
-            audio_player_sound.play()
+            play_sound(config.sound_yippee, true)
             continue
 
         # debug_draw.add_rect(unit.get_bounds(), Color.green)
@@ -626,7 +619,7 @@ func tick() -> void:
                 var is_done : int = now_tick >= job.started_at + job.duration
                 if is_done:
                     var _did_erase = unit.jobs.erase(JOBS.EXPLODE)
-                    unit.state = Unit.STATES.DEAD
+                    unit.state = Unit.STATES.DEAD_EXPLOSION
                     unit.state_entered_at = now_tick
                     unit.set_text("")
 
@@ -634,7 +627,7 @@ func tick() -> void:
             Unit.STATES.FALLING:
                 if is_grounded:
                     if now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
-                        unit.state = Unit.STATES.DEAD
+                        unit.state = Unit.STATES.DEAD_FALL
                         unit.state_entered_at = now_tick
                     else:
                         unit.state = Unit.STATES.WALKING
@@ -716,12 +709,17 @@ func tick() -> void:
                     unit.state = Unit.STATES.FALLING
                     unit.state_entered_at = now_tick
 
-            Unit.STATES.DEAD:
+            Unit.STATES.DEAD_FALL:
                 unit.status = Unit.STATUSES.DEAD
                 unit.play("dead_fall")
-                audio_player_sound.stream = config.sound_splat
-                audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
-                audio_player_sound.play()
+                play_sound(config.sound_splat)
+                
+            Unit.STATES.DEAD_EXPLOSION:
+                unit.status = Unit.STATUSES.DEAD
+                unit.play("explode")
+                yield(unit, "animation_finished")
+                play_sound(config.sound_explode)
+                erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
                 
         unit.position = destination
         
@@ -741,8 +739,9 @@ func tick() -> void:
         if unit.status == Unit.STATUSES.DEAD:
             units_dead += 1
 
-    if units_dead + units_exited == units_max   :
+    if units_dead + units_exited == units_max || now_tick == explosion_at:
         is_ticking = false
+        print("DONE")
 
         if units_exited >= units_goal:
             if current_level >= config.levels.size() - 1:
@@ -751,16 +750,17 @@ func tick() -> void:
                 yield(self, "level_unloaded")
             else:
                 print("Loading next level")
-                yield(get_tree().create_timer(2), "timeout")
+                yield(get_tree().create_timer(1), "timeout")
                 unload_level()
                 yield(self, "level_unloaded")
                 current_level += 1
                 load_level(config.levels[current_level])
+                yield(self, "level_loaded")
                 is_ticking = true
                 start_level()
         else:
             print("Restarting current level")
-            yield(get_tree().create_timer(2), "timeout")
+            yield(get_tree().create_timer(1), "timeout")
             unload_level()
             yield(self, "level_unloaded")
             load_level(config.levels[current_level])
@@ -894,3 +894,11 @@ static func calculate_position(index: int, width: int) -> Vector2:
 
 func to_viewport_position(pos: Vector2) -> Vector2:
     return pos - camera.position
+
+func play_sound(sound: AudioStream, pitch_rand: bool = false) -> void:
+    audio_player_sound.stream = sound
+    if pitch_rand:
+        audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
+    else:
+        audio_player_sound.pitch_scale = 1.0
+    audio_player_sound.play()

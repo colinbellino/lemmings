@@ -17,3 +17,4 @@ export var sound_door_open : AudioStreamSample
 export var sound_yippee : AudioStreamSample
 export var sound_splat : AudioStreamSample
 export var sound_assign_job : AudioStreamSample
+export var sound_explode : AudioStreamSample
