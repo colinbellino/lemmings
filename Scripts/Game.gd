@@ -45,6 +45,7 @@ const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
 const JOB_DIG_DURATION : int = 300
 const JOB_EXPLODE_DURATION : int = 100
+const JOB_EXPLODE_ANIM_DURATION : int = 27
 const JOB_EXPLODE_STEP : int = 20
 const JOB_FLOAT_DELAY : int = 10
 const FALL_DURATION_FATAL : int = 55
@@ -599,7 +600,7 @@ func tick() -> void:
         if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
             unit.status = Unit.STATUSES.EXITED
-            play_sound(config.sound_yippee, true)
+            play_sound(config.sound_yippee, rand_range(0.9, 1.2))
             continue
 
         # debug_draw.add_rect(unit.get_bounds(), Color.green)
@@ -713,25 +714,29 @@ func tick() -> void:
                     unit.state_entered_at = now_tick
 
             Unit.STATES.DEAD_FALL:
-                unit.status = Unit.STATUSES.DEAD
-                unit.play("dead_fall")
-                play_sound(config.sound_splat)
+                if now_tick == unit.state_entered_at:
+                    unit.play("dead_fall")
+                    yield(unit, "animation_finished")
+                    play_sound(config.sound_splat)
+                    unit.status = Unit.STATUSES.DEAD
                 
             Unit.STATES.DEAD_EXPLOSION_FALLING:
                 destination.y += 1
 
-                if now_tick == unit.state_entered_at + 27:
+                if now_tick > unit.state_entered_at + JOB_EXPLODE_ANIM_DURATION:
                     unit.status = Unit.STATUSES.DEAD
-                    unit.visible = false
-                    play_sound(config.sound_explode)
                     erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
+                    play_sound(config.sound_explode, rand_range(1.0, 1.1), rand_range(0.0, 0.2))
 
             Unit.STATES.DEAD_EXPLOSION_GROUNDED:
-                unit.status = Unit.STATUSES.DEAD
-                unit.play("explode")
-                yield(unit, "animation_finished")
-                play_sound(config.sound_explode)
-                erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
+                if now_tick == unit.state_entered_at:
+                    play_sound(config.sound_deathrattle)
+                    unit.play("explode")
+
+                if now_tick > unit.state_entered_at + JOB_EXPLODE_ANIM_DURATION:
+                    unit.status = Unit.STATUSES.DEAD
+                    erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
+                    play_sound(config.sound_explode, rand_range(1.0, 1.1), rand_range(0.0, 0.2))
                 
         unit.position = destination
         
@@ -749,6 +754,7 @@ func tick() -> void:
         if unit.status == Unit.STATUSES.EXITED:
             units_exited += 1
         if unit.status == Unit.STATUSES.DEAD:
+            unit.visible = false
             units_dead += 1
 
     if units_dead + units_exited == units_max || now_tick == explosion_at:
@@ -906,10 +912,8 @@ static func calculate_position(index: int, width: int) -> Vector2:
 func to_viewport_position(pos: Vector2) -> Vector2:
     return pos - camera.position
 
-func play_sound(sound: AudioStream, pitch_rand: bool = false) -> void:
+func play_sound(sound: AudioStream, pitch: float = 1.0, delay: float = 0) -> void:
     audio_player_sound.stream = sound
-    if pitch_rand:
-        audio_player_sound.pitch_scale = rand_range(0.9, 1.2)
-    else:
-        audio_player_sound.pitch_scale = 1.0
+    audio_player_sound.pitch_scale = pitch
+    yield(get_tree().create_timer(delay), "timeout")
     audio_player_sound.play()
