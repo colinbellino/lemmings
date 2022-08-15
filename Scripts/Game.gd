@@ -50,6 +50,7 @@ const JOB_EXPLODE_STEP : int = 20
 const JOB_FLOAT_DELAY : int = 10
 const FALL_DURATION_FATAL : int = 55
 const FALL_DURATION_FLOAT : int = 25
+const FALL_SPLAT_ANIM_DURATION : int = 27
 
 # Scene stuff
 var map_image : Image
@@ -88,7 +89,7 @@ var tool_secondary : int = TOOLS.RECT_ERASE
 var tool_tertiary : int = TOOLS.RECT_PAINT
 var mouse_button_pressed : int
 var debug_is_visible : bool
-var explosion_at : int
+var global_explosion_at : int
 
 # Level data
 var units : Array = []
@@ -466,10 +467,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             if unit.has_job(JOBS.DIG_VERTICAL):
                 return
 
-            unit.jobs[JOBS.DIG_VERTICAL] = {
-                duration = JOB_DIG_DURATION,
-                started_at = now_tick,
-            }
+            add_job(unit, JOBS.DIG_VERTICAL)
             play_sound(config.sound_assign_job)
             jobs_count[JOBS.DIG_VERTICAL] -= 1
 
@@ -491,10 +489,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             if unit.has_job(JOBS.BLOCK):
                 return
 
-            unit.jobs[JOBS.BLOCK] = {
-                duration = -1,
-                started_at = now_tick,
-            }
+            add_job(unit, JOBS.BLOCK)
             play_sound(config.sound_assign_job)
             jobs_count[JOBS.BLOCK] -= 1
 
@@ -516,10 +511,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             if unit.has_job(JOBS.FLOAT):
                 return
             
-            unit.jobs[JOBS.FLOAT] = {
-                duration = -1,
-                started_at = now_tick,
-            }
+            add_job(unit, JOBS.FLOAT)
             play_sound(config.sound_assign_job)
             jobs_count[JOBS.FLOAT] -= 1
 
@@ -528,16 +520,11 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
 
             spawn_is_active = false
-            explosion_at = now_tick + JOB_EXPLODE_DURATION + 30
+            global_explosion_at = now_tick + JOB_EXPLODE_DURATION + JOB_EXPLODE_ANIM_DURATION + 20
 
             for unit_index in range(0, units_spawned):
                 var unit : Unit = units[unit_index]
-                var jobs = unit.jobs
-                jobs[JOBS.EXPLODE] = {
-                    duration = JOB_EXPLODE_DURATION,
-                    started_at = now_tick,
-                }
-                unit.jobs = jobs
+                add_job(unit, JOBS.EXPLODE)
 
             play_sound(config.sound_assign_job)
 
@@ -611,21 +598,23 @@ func tick() -> void:
 
         if unit.has_job(JOBS.EXPLODE):
             var job = unit.jobs[JOBS.EXPLODE]
-            if (now_tick - job.started_at) % JOB_EXPLODE_STEP == 0:
-                var unit_rect := unit.get_bounds()
-                var countdown : int = JOB_EXPLODE_DURATION / JOB_EXPLODE_STEP - (now_tick - job.started_at) / JOB_EXPLODE_STEP
-                debug_draw.add_rect(unit_rect, Color.red)
-                unit.set_text(String(countdown))
+            if now_tick <= job.started_at + JOB_EXPLODE_DURATION:
+                if (now_tick - job.started_at) % JOB_EXPLODE_STEP == 0:
+                    var unit_rect := unit.get_bounds()
+                    var countdown : int = JOB_EXPLODE_DURATION / JOB_EXPLODE_STEP - (now_tick - job.started_at) / JOB_EXPLODE_STEP
+                    debug_draw.add_rect(unit_rect, Color.red)
+                    unit.set_text(String(countdown))
 
-                var is_done : int = now_tick == job.started_at + job.duration
-                if is_done:
-                    unit.set_text("")
-                    var _did_erase = unit.jobs.erase(JOBS.EXPLODE)
-                    if unit.state == Unit.STATES.FALLING:
-                        unit.state = Unit.STATES.DEAD_EXPLOSION_FALLING
-                    else:
-                        unit.state = Unit.STATES.DEAD_EXPLOSION_GROUNDED
-                    unit.state_entered_at = now_tick
+            var timer_done : int = now_tick == job.started_at + JOB_EXPLODE_DURATION
+            if timer_done:
+                unit.set_text("")
+                play_sound(config.sound_deathrattle)
+
+            var animation_done : int = now_tick == job.started_at + JOB_EXPLODE_DURATION + JOB_EXPLODE_ANIM_DURATION
+            if animation_done:
+                unit.status = Unit.STATUSES.DEAD
+                erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
+                play_sound(config.sound_explode, rand_range(1.0, 1.1), rand_range(0.0, 0.2))
 
         match unit.state:
             Unit.STATES.FALLING:
@@ -714,30 +703,13 @@ func tick() -> void:
                     unit.state_entered_at = now_tick
 
             Unit.STATES.DEAD_FALL:
-                if now_tick == unit.state_entered_at:
+                if now_tick == unit.state_entered_at + 1:
                     unit.play("dead_fall")
-                    yield(unit, "animation_finished")
                     play_sound(config.sound_splat)
-                    unit.status = Unit.STATUSES.DEAD
-                
-            Unit.STATES.DEAD_EXPLOSION_FALLING:
-                destination.y += 1
 
-                if now_tick > unit.state_entered_at + JOB_EXPLODE_ANIM_DURATION:
+                if now_tick == unit.state_entered_at + FALL_SPLAT_ANIM_DURATION:
                     unit.status = Unit.STATUSES.DEAD
-                    erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
-                    play_sound(config.sound_explode, rand_range(1.0, 1.1), rand_range(0.0, 0.2))
-
-            Unit.STATES.DEAD_EXPLOSION_GROUNDED:
-                if now_tick == unit.state_entered_at:
-                    play_sound(config.sound_deathrattle)
-                    unit.play("explode")
-
-                if now_tick > unit.state_entered_at + JOB_EXPLODE_ANIM_DURATION:
-                    unit.status = Unit.STATUSES.DEAD
-                    erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
-                    play_sound(config.sound_explode, rand_range(1.0, 1.1), rand_range(0.0, 0.2))
-                
+                    
         unit.position = destination
         
         for job_id in unit.jobs.keys():
@@ -754,10 +726,12 @@ func tick() -> void:
         if unit.status == Unit.STATUSES.EXITED:
             units_exited += 1
         if unit.status == Unit.STATUSES.DEAD:
+            unit.jobs.clear()
+            unit.set_text("")
             unit.visible = false
             units_dead += 1
 
-    if units_dead + units_exited == units_max || now_tick == explosion_at:
+    if units_dead + units_exited == units_max || now_tick == global_explosion_at:
         is_ticking = false
 
         if units_exited >= units_goal:
@@ -917,3 +891,26 @@ func play_sound(sound: AudioStream, pitch: float = 1.0, delay: float = 0) -> voi
     audio_player_sound.pitch_scale = pitch
     yield(get_tree().create_timer(delay), "timeout")
     audio_player_sound.play()
+
+func add_job(unit: Unit, job_id: int) -> void:
+    match job_id:
+        JOBS.DIG_VERTICAL:
+            unit.jobs[JOBS.DIG_VERTICAL] = {
+                duration = JOB_DIG_DURATION,
+                started_at = now_tick,
+            }
+        JOBS.BLOCK:
+            unit.jobs[JOBS.BLOCK] = {
+                duration = -1,
+                started_at = now_tick,
+            }
+        JOBS.FLOAT:
+            unit.jobs[JOBS.FLOAT] = {
+                duration = -1,
+                started_at = now_tick,
+            }
+        JOBS.EXPLODE: 
+            unit.jobs[JOBS.EXPLODE] = {
+                duration = -1,
+                started_at = now_tick,
+            }
