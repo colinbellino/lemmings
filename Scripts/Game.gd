@@ -527,7 +527,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
 
             spawn_is_active = false
-            explosion_at = now_tick + JOB_EXPLODE_DURATION + JOB_EXPLODE_STEP
+            explosion_at = now_tick + JOB_EXPLODE_DURATION + 30
 
             for unit_index in range(0, units_spawned):
                 var unit : Unit = units[unit_index]
@@ -616,12 +616,15 @@ func tick() -> void:
                 debug_draw.add_rect(unit_rect, Color.red)
                 unit.set_text(String(countdown))
 
-                var is_done : int = now_tick >= job.started_at + job.duration
+                var is_done : int = now_tick == job.started_at + job.duration
                 if is_done:
-                    var _did_erase = unit.jobs.erase(JOBS.EXPLODE)
-                    unit.state = Unit.STATES.DEAD_EXPLOSION
-                    unit.state_entered_at = now_tick
                     unit.set_text("")
+                    var _did_erase = unit.jobs.erase(JOBS.EXPLODE)
+                    if unit.state == Unit.STATES.FALLING:
+                        unit.state = Unit.STATES.DEAD_EXPLOSION_FALLING
+                    else:
+                        unit.state = Unit.STATES.DEAD_EXPLOSION_GROUNDED
+                    unit.state_entered_at = now_tick
 
         match unit.state:
             Unit.STATES.FALLING:
@@ -714,7 +717,16 @@ func tick() -> void:
                 unit.play("dead_fall")
                 play_sound(config.sound_splat)
                 
-            Unit.STATES.DEAD_EXPLOSION:
+            Unit.STATES.DEAD_EXPLOSION_FALLING:
+                destination.y += 1
+
+                if now_tick == unit.state_entered_at + 27:
+                    unit.status = Unit.STATUSES.DEAD
+                    unit.visible = false
+                    play_sound(config.sound_explode)
+                    erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
+
+            Unit.STATES.DEAD_EXPLOSION_GROUNDED:
                 unit.status = Unit.STATUSES.DEAD
                 unit.play("explode")
                 yield(unit, "animation_finished")
@@ -741,7 +753,6 @@ func tick() -> void:
 
     if units_dead + units_exited == units_max || now_tick == explosion_at:
         is_ticking = false
-        print("DONE")
 
         if units_exited >= units_goal:
             if current_level >= config.levels.size() - 1:
