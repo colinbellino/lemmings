@@ -23,10 +23,11 @@ enum TOOLS {
     JOB_DIG_HORIZONTAL = 6,
     JOB_MINE = 7,
     JOB_DIG_VERTICAL = 8,
-    RECT_PAINT = 9,
-    RECT_ERASE = 10,
-    SPAWN_UNIT = 11,
-    EXPLODE_ALL = 12,
+    PAINT_RECT = 9,
+    PAINT_CIRCLE = 10
+    ERASE_RECT = 11,
+    SPAWN_UNIT = 12,
+    EXPLODE_ALL = 13,
 }
 
 enum PIXELS {
@@ -85,8 +86,8 @@ var is_ticking : bool
 var game_scale : int
 var next_tick_at : float
 var tool_primary : int = TOOLS.JOB_DIG_VERTICAL
-var tool_secondary : int = TOOLS.RECT_ERASE
-var tool_tertiary : int = TOOLS.RECT_PAINT
+var tool_secondary : int = TOOLS.PAINT_CIRCLE
+var tool_tertiary : int = TOOLS.PAINT_RECT
 var mouse_button_pressed : int
 var debug_is_visible : bool
 var global_explosion_at : int
@@ -221,8 +222,8 @@ func start_game() -> void:
     set_cursor(CURSOR_DEFAULT)
 
     # Init UI
-    action0_button.connect("pressed", self, "select_tool", [TOOLS.RECT_PAINT])
-    action1_button.connect("pressed", self, "select_tool", [TOOLS.RECT_ERASE])
+    action0_button.connect("pressed", self, "select_tool", [TOOLS.PAINT_RECT])
+    action1_button.connect("pressed", self, "select_tool", [TOOLS.ERASE_RECT])
     action2_button.connect("pressed", self, "select_tool", [TOOLS.SPAWN_UNIT])
     hud.connect("tool_selected", self, "use_tool_no_position")
 
@@ -394,7 +395,7 @@ func get_unit_at(x: int, y: int) -> int:
 
     for unit_index in range(0, units_spawned):
         var unit = units[unit_index]
-        if is_inside_rect(Vector2(x, y), unit.get_bounds()):
+        if is_inside_rect(Vector2(x, y), unit.get_bounds_centered()):
             return unit_index
 
     return -1
@@ -426,19 +427,26 @@ func use_tool_no_position(tool_id: int) -> void:
     
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.RECT_ERASE:
+        TOOLS.ERASE_RECT:
             if not is_in_bounds(x, y):
                 return
 
             var size = 20
-            erase_rect(x - size / 2, y - size / 2, size, size)
+            paint_rect(x, y, size, size, PIXELS.EMPTY)
 
-        TOOLS.RECT_PAINT:
+        TOOLS.PAINT_RECT:
             if not is_in_bounds(x, y):
                 return
                 
             var size = 20
-            paint_rect(x - size / 2, y - size / 2, size, size, PIXELS.BLOCK | PIXELS.PAINT)
+            paint_rect(x, y, size, size, PIXELS.BLOCK | PIXELS.PAINT)
+
+        TOOLS.PAINT_CIRCLE:
+            if not is_in_bounds(x, y):
+                return
+
+            var size = 10
+            paint_circle(x, y, size, PIXELS.BLOCK | PIXELS.PAINT)
 
         TOOLS.SPAWN_UNIT:
             if not is_in_bounds(x, y):
@@ -590,8 +598,6 @@ func tick() -> void:
             play_sound(config.sound_yippee, rand_range(0.9, 1.2))
             continue
 
-        # debug_draw.add_rect(unit.get_bounds(), Color.green)
-
         # TODO: Check if we can walk down a pixel before falling
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
@@ -600,9 +606,7 @@ func tick() -> void:
             var job = unit.jobs[JOBS.EXPLODE]
             if now_tick <= job.started_at + JOB_EXPLODE_DURATION:
                 if (now_tick - job.started_at) % JOB_EXPLODE_STEP == 0:
-                    var unit_rect := unit.get_bounds()
                     var countdown : int = JOB_EXPLODE_DURATION / JOB_EXPLODE_STEP - (now_tick - job.started_at) / JOB_EXPLODE_STEP
-                    debug_draw.add_rect(unit_rect, Color.red)
                     unit.set_text(String(countdown))
 
             var timer_done : int = now_tick == job.started_at + JOB_EXPLODE_DURATION
@@ -613,7 +617,7 @@ func tick() -> void:
             var animation_done : int = now_tick == job.started_at + JOB_EXPLODE_DURATION + JOB_EXPLODE_ANIM_DURATION
             if animation_done:
                 unit.status = Unit.STATUSES.DEAD
-                erase_rect(unit.position.x - unit.width / 2, unit.position.y - unit.height / 2, 20, 20)
+                paint_circle(unit.position.x, unit.position.y, 12, PIXELS.EMPTY)
                 play_sound(config.sound_explode, rand_range(1.0, 1.1), rand_range(0.0, 0.2))
 
         match unit.state:
@@ -650,9 +654,9 @@ func tick() -> void:
                         unit.play("dig")
                         var job = unit.jobs[JOBS.DIG_VERTICAL]
                         if (now_tick - job.started_at) % 10 == 0:
-                            var unit_rect := Rect2(unit.position.x - unit.width / 2, unit.position.y, unit.width, 6)
-                            debug_draw.add_rect(unit_rect, Color.red)
-                            erase_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y)
+                            var rect := Rect2(unit.position.x, unit.position.y + 3, unit.width, 6)
+                            debug_draw.add_rect(rect, Color.red)
+                            paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.EMPTY)
     
                             var is_not_done : int = now_tick < job.started_at + job.duration
                             if is_not_done:
@@ -660,11 +664,11 @@ func tick() -> void:
 
                     elif unit.has_job(JOBS.BLOCK):
                         var job = unit.jobs[JOBS.BLOCK]
-                        var unit_rect := unit.get_bounds()
-                        debug_draw.add_rect(unit_rect, Color.red)
+                        var rect = Rect2(unit.position.x, unit.position.y, unit.width, unit.height)
+                        debug_draw.add_rect(rect, Color.red)
                         if now_tick == job.started_at:
                             unit.play("block")
-                            paint_rect(unit_rect.position.x, unit_rect.position.y, unit_rect.size.x, unit_rect.size.y, PIXELS.BLOCK)
+                            paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.BLOCK)
 
                     else:
                         var wall_check_pos_x : int = unit.position.x + unit.direction
@@ -783,32 +787,13 @@ func spawn_unit(x: int, y: int) -> Unit:
 
     return unit
 
-func erase_rect(origin_x: int, origin_y: int, width: int, height: int) -> void:
-    var pixels_to_delete : PoolIntArray = []
-
-    for offset_x in range(0, width):
-        for offset_y in range(0, height):
-            var pos_x = origin_x + offset_x
-            var pos_y = origin_y + offset_y
-            if is_in_bounds(pos_x, pos_y):
-                var index := calculate_index(pos_x, pos_y, map_width)
-                pixels_to_delete.append(index)
-
-    if pixels_to_delete.size() <= 0:
-        return
-
-    for index in pixels_to_delete:
-        map_data[index] = PIXELS.EMPTY
-
-    update_map(origin_x, origin_y, width, height)
-    
 func paint_rect(origin_x: int, origin_y: int, width: int, height: int, value: int) -> void:
     var pixels_to_draw : PoolIntArray = []
 
     for offset_x in range(0, width):
         for offset_y in range(0, height):
-            var pos_x = origin_x + offset_x
-            var pos_y = origin_y + offset_y
+            var pos_x = origin_x - width / 2 + offset_x
+            var pos_y = origin_y - height / 2 + offset_y
             if is_in_bounds(pos_x, pos_y):
                 var index := calculate_index(pos_x, pos_y, map_width)
                 pixels_to_draw.append(index)
@@ -819,7 +804,26 @@ func paint_rect(origin_x: int, origin_y: int, width: int, height: int, value: in
     for index in pixels_to_draw:
         map_data[index] = value
 
-    update_map(origin_x, origin_y, width, height)
+    update_map(origin_x - width / 2, origin_y - height / 2, width, height)
+
+func paint_circle(origin_x: int, origin_y: int, radius: int, value: int) -> void:
+    var pixels_to_draw : PoolIntArray = []
+
+    for r in range(0, radius):
+        for angle in range(0, 360):
+            var pos_x : int = round(origin_x + r * cos(angle * PI / 180))
+            var pos_y : int = round(origin_y + r * sin(angle * PI / 180))
+            if is_in_bounds(pos_x, pos_y):
+                var index := calculate_index(pos_x, pos_y, map_width)
+                pixels_to_draw.append(index)
+
+    if pixels_to_draw.size() <= 0:
+        return
+
+    for index in pixels_to_draw:
+        map_data[index] = value
+
+    update_map(origin_x - radius, origin_y - radius, radius * 2, radius * 2)
 
 func has_flag(x: int, y: int, flag: int) -> bool: 
     if not is_in_bounds(x, y):

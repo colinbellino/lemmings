@@ -183,6 +183,10 @@ debug_12={
  ]
 }
 
+[network]
+
+limits/debugger_stdout/max_chars_per_second=204800
+
 [physics]
 
 common/enable_pause_aware_picking=true

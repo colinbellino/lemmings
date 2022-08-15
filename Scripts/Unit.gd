@@ -28,6 +28,9 @@ var climb_step : int = 5
 var direction : int = 1
 
 func get_bounds() -> Rect2:
+    return Rect2(position.x, position.y, width, height)
+
+func get_bounds_centered() -> Rect2:
     return Rect2(position.x - width / 2, position.y - height / 2, width, height)
 
 func has_job(flag: int) -> bool: 
