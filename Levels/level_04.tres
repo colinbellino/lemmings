@@ -1,0 +1,27 @@
+[gd_resource type="Resource" load_steps=6 format=2]
+
+[ext_resource path="res://Scripts/Level.gd" type="Script" id=1]
+[ext_resource path="res://Prefabs/Entrance_00.tscn" type="PackedScene" id=2]
+[ext_resource path="res://Prefabs/Exit_00.tscn" type="PackedScene" id=3]
+[ext_resource path="res://Audio/Musics/09 You Need Bashers This Time.mp3" type="AudioStream" id=4]
+[ext_resource path="res://Art/Levels/map_04.png" type="Texture" id=5]
+
+[resource]
+script = ExtResource( 1 )
+texture = ExtResource( 5 )
+music = ExtResource( 4 )
+entrance = ExtResource( 2 )
+exit = ExtResource( 3 )
+camera_x = 50
+camera_y = 0
+units_max = 50
+units_goal = 5
+spawn_rate = 50
+job_climb = 0
+job_float = 0
+job_explode = 0
+job_stop = 0
+job_bridge = 0
+job_dig_horizontal = 50
+job_mine = 0
+job_dig_vertical = 0

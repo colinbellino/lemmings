@@ -44,7 +44,10 @@ const TICK_SPEED : int = 50
 const TIME_SCALE : int = 1
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
-const JOB_DIG_DURATION : int = 300
+const JOB_DIG_HORIZONTAL_DURATION : int = 750
+const JOB_DIG_HORIZONTAL_STEP : int = 10
+const JOB_DIG_VERTICAL_DURATION : int = 300
+const JOB_DIG_VERTICAL_STEP : int = 10
 const JOB_EXPLODE_DURATION : int = 100
 const JOB_EXPLODE_ANIM_DURATION : int = 27
 const JOB_EXPLODE_STEP : int = 20
@@ -424,53 +427,30 @@ func set_cursor(cursor_id: int) -> void:
 
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.JOB_DIG_VERTICAL:
-            use_job_tool(x, y, pressed, JOBS.DIG_VERTICAL)
-            return
-
-        TOOLS.JOB_BLOCK:
-            use_job_tool(x, y, pressed, JOBS.BLOCK)
-            return
-            
-        TOOLS.JOB_EXPLODE:
-            
-            use_job_tool(x, y, pressed, JOBS.EXPLODE)
-            return
-            
-        TOOLS.JOB_FLOAT:
-            use_job_tool(x, y, pressed, JOBS.FLOAT)
+        TOOLS.JOB_FLOAT, TOOLS.JOB_EXPLODE, TOOLS.JOB_BLOCK, TOOLS.JOB_DIG_HORIZONTAL, TOOLS.JOB_DIG_VERTICAL:
+            use_job_tool(x, y, pressed, tool_id, JOBS.values()[tool_id])
             return
 
         TOOLS.PAINT_RECT:
-            if not is_in_bounds(x, y):
-                return
-                
             var size = 20
             paint_rect(x, y, size, size, PIXELS.BLOCK | PIXELS.PAINT)
 
-
         TOOLS.PAINT_CIRCLE:
-            if not is_in_bounds(x, y):
-                return
-
             var size = 10
             paint_circle(x, y, size, PIXELS.BLOCK | PIXELS.PAINT)
 
         TOOLS.ERASE_RECT:
-            if not is_in_bounds(x, y):
-                return
-
             var size = 20
             paint_rect(x, y, size, size, PIXELS.EMPTY)
 
         TOOLS.SPAWN_UNIT:
-            if not is_in_bounds(x, y):
+            if pressed:
                 return
-
-            if not pressed:
-                if not has_flag(x, y, PIXELS.BLOCK):
-                    var unit := spawn_unit(x, y)
-                    print("%s spawned" % unit.name)
+            if has_flag(x, y, PIXELS.BLOCK):
+                return
+                
+            var unit := spawn_unit(x, y)
+            print("%s spawned" % unit.name)
 
         TOOLS.EXPLODE_ALL:
             if pressed:
@@ -503,13 +483,14 @@ func select_tool(tool_id: int) -> void:
 
     use_tool(tool_id, 0, 0, false)
 
-func use_job_tool(x: int, y: int, pressed: bool, job_id: int) -> void:
+func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> void:
     if not is_in_bounds(x, y):
         return
 
     if pressed:
         return
 
+    print("use_job_tool: ", [job_id, jobs_count])
     if jobs_count[job_id] < 1:
         return
 
@@ -524,6 +505,8 @@ func use_job_tool(x: int, y: int, pressed: bool, job_id: int) -> void:
     add_job(unit, job_id)
     play_sound(config.sound_assign_job)
     jobs_count[job_id] -= 1
+
+    hud.set_job_button_data(tool_id, String(jobs_count[job_id]))
 
 func set_toggle_debug_visibility(value: bool) -> void:
     collision_sprite.visible = value
@@ -572,7 +555,6 @@ func tick() -> void:
             play_sound(config.sound_yippee, rand_range(0.9, 1.2))
             continue
 
-        # TODO: Check if we can walk down a pixel before falling
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
 
@@ -597,13 +579,17 @@ func tick() -> void:
                 unit.status = Unit.STATUSES.DEAD
                 play_sound(config.sound_explode, rand_range(1.0, 1.1))
                 paint_circle(unit.position.x, unit.position.y, 9, PIXELS.EMPTY)
-                var dust_particle = ResourceLoader.load("res://Prefabs/ExplosionDust.tscn").instance()
+                var dust_particle = config.dust_particle_prefab.instance()
                 dust_particle.position = unit.position
                 dust_particle.emitting = true
                 scaler_node.add_child(dust_particle)
 
         match unit.state:
             Unit.STATES.FALLING:
+                unit.jobs.erase(JOBS.DIG_VERTICAL)
+                unit.jobs.erase(JOBS.DIG_HORIZONTAL)
+                unit.jobs.erase(JOBS.BLOCK)
+
                 if is_grounded:
                     if now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
                         unit.state = Unit.STATES.DEAD_FALL
@@ -635,10 +621,21 @@ func tick() -> void:
 
             Unit.STATES.WALKING:
                 if is_grounded:
-                    if unit.has_job(JOBS.DIG_VERTICAL):
-                        unit.play("dig")
+                    # TODO: if have wall in front
+                    if unit.has_job(JOBS.DIG_HORIZONTAL):
+                        unit.play("dig_horizontal")
+                        var job = unit.jobs[JOBS.DIG_HORIZONTAL]
+                        var is_not_done : int = now_tick < job.started_at + job.duration
+                        if is_not_done:
+                            var tick = (now_tick - job.started_at)
+                            if tick % JOB_DIG_HORIZONTAL_STEP == 0:
+                                paint_circle(unit.position.x + 3 * unit.direction, unit.position.y, unit.height / 2, PIXELS.EMPTY)
+                                destination.x += 1 * unit.direction
+
+                    elif unit.has_job(JOBS.DIG_VERTICAL):
+                        unit.play("dig_vertical")
                         var job = unit.jobs[JOBS.DIG_VERTICAL]
-                        if (now_tick - job.started_at) % 10 == 0:
+                        if (now_tick - job.started_at) % JOB_DIG_VERTICAL_STEP == 0:
                             var rect := Rect2(unit.position.x, unit.position.y + 3, unit.width, 6)
                             debug_draw.add_rect(rect, Color.red)
                             paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.EMPTY)
@@ -884,16 +881,6 @@ func play_sound(sound: AudioStream, pitch: float = 1.0) -> void:
 
 func add_job(unit: Unit, job_id: int) -> void:
     match job_id:
-        JOBS.DIG_VERTICAL:
-            unit.jobs[JOBS.DIG_VERTICAL] = {
-                duration = JOB_DIG_DURATION,
-                started_at = now_tick,
-            }
-        JOBS.BLOCK:
-            unit.jobs[JOBS.BLOCK] = {
-                duration = -1,
-                started_at = now_tick,
-            }
         JOBS.FLOAT:
             unit.jobs[JOBS.FLOAT] = {
                 duration = -1,
@@ -904,3 +891,21 @@ func add_job(unit: Unit, job_id: int) -> void:
                 duration = -1,
                 started_at = now_tick,
             }
+        JOBS.BLOCK:
+            unit.jobs[JOBS.BLOCK] = {
+                duration = -1,
+                started_at = now_tick,
+            }
+        JOBS.DIG_HORIZONTAL:
+            unit.jobs[JOBS.DIG_HORIZONTAL] = {
+                duration = JOB_DIG_HORIZONTAL_DURATION,
+                started_at = now_tick,
+            }
+        JOBS.DIG_VERTICAL:
+            unit.jobs[JOBS.DIG_VERTICAL] = {
+                duration = JOB_DIG_VERTICAL_DURATION,
+                started_at = now_tick,
+            }
+        _: 
+            print("Job not implemented: ", job_id)
+            return
