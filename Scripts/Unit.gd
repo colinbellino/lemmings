@@ -4,6 +4,7 @@ extends AnimatedSprite
 onready var label = get_node("%Label")
 
 enum STATES {
+    IDLE,
     WALKING,
     FALLING,
     FLOATING,

@@ -225,7 +225,7 @@ func start_game() -> void:
     action0_button.connect("pressed", self, "select_tool", [TOOLS.PAINT_RECT])
     action1_button.connect("pressed", self, "select_tool", [TOOLS.ERASE_RECT])
     action2_button.connect("pressed", self, "select_tool", [TOOLS.SPAWN_UNIT])
-    hud.connect("tool_selected", self, "use_tool_no_position")
+    hud.connect("tool_selected", self, "select_tool")
 
     collision_image = Image.new()
 
@@ -422,17 +422,24 @@ func set_cursor(cursor_id: int) -> void:
 
     Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
 
-func use_tool_no_position(tool_id: int) -> void:
-    use_tool(tool_id, 0, 0, false)
-    
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.ERASE_RECT:
-            if not is_in_bounds(x, y):
-                return
+        TOOLS.JOB_DIG_VERTICAL:
+            use_job_tool(x, y, pressed, JOBS.DIG_VERTICAL)
+            return
 
-            var size = 20
-            paint_rect(x, y, size, size, PIXELS.EMPTY)
+        TOOLS.JOB_BLOCK:
+            use_job_tool(x, y, pressed, JOBS.BLOCK)
+            return
+            
+        TOOLS.JOB_EXPLODE:
+            
+            use_job_tool(x, y, pressed, JOBS.EXPLODE)
+            return
+            
+        TOOLS.JOB_FLOAT:
+            use_job_tool(x, y, pressed, JOBS.FLOAT)
+            return
 
         TOOLS.PAINT_RECT:
             if not is_in_bounds(x, y):
@@ -441,12 +448,20 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             var size = 20
             paint_rect(x, y, size, size, PIXELS.BLOCK | PIXELS.PAINT)
 
+
         TOOLS.PAINT_CIRCLE:
             if not is_in_bounds(x, y):
                 return
 
             var size = 10
             paint_circle(x, y, size, PIXELS.BLOCK | PIXELS.PAINT)
+
+        TOOLS.ERASE_RECT:
+            if not is_in_bounds(x, y):
+                return
+
+            var size = 20
+            paint_rect(x, y, size, size, PIXELS.EMPTY)
 
         TOOLS.SPAWN_UNIT:
             if not is_in_bounds(x, y):
@@ -456,72 +471,6 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 if not has_flag(x, y, PIXELS.BLOCK):
                     var unit := spawn_unit(x, y)
                     print("%s spawned" % unit.name)
-
-        TOOLS.JOB_DIG_VERTICAL:
-            if not is_in_bounds(x, y):
-                return
-
-            if pressed:
-                return
-            
-            if jobs_count[JOBS.DIG_VERTICAL] < 1:
-                return
-
-            var unit_index := get_unit_at(x, y)
-            if unit_index == -1:
-                return
-                
-            var unit : Unit = units[unit_index]
-            if unit.has_job(JOBS.DIG_VERTICAL):
-                return
-
-            add_job(unit, JOBS.DIG_VERTICAL)
-            play_sound(config.sound_assign_job)
-            jobs_count[JOBS.DIG_VERTICAL] -= 1
-
-        TOOLS.JOB_BLOCK:
-            if not is_in_bounds(x, y):
-                return
-                
-            if pressed:
-                return
-            
-            if jobs_count[JOBS.BLOCK] < 1:
-                return
-
-            var unit_index := get_unit_at(x, y)
-            if unit_index == -1:
-                return
-                
-            var unit : Unit = units[unit_index]
-            if unit.has_job(JOBS.BLOCK):
-                return
-
-            add_job(unit, JOBS.BLOCK)
-            play_sound(config.sound_assign_job)
-            jobs_count[JOBS.BLOCK] -= 1
-
-        TOOLS.JOB_FLOAT:
-            if not is_in_bounds(x, y):
-                return
-
-            if pressed:
-                return
-
-            if jobs_count[JOBS.FLOAT] < 1:
-                return
-
-            var unit_index := get_unit_at(x, y)
-            if unit_index == -1:
-                return
-
-            var unit : Unit = units[unit_index]
-            if unit.has_job(JOBS.FLOAT):
-                return
-            
-            add_job(unit, JOBS.FLOAT)
-            play_sound(config.sound_assign_job)
-            jobs_count[JOBS.FLOAT] -= 1
 
         TOOLS.EXPLODE_ALL:
             if pressed:
@@ -547,9 +496,34 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
 
 func select_tool(tool_id: int) -> void:
     print("Tool selected: ", TOOLS.keys()[tool_id])
-    tool_primary = tool_id
     if tool_id < JOBS.size():
+        tool_primary = tool_id
         hud.select_job(tool_id)
+        return
+
+    use_tool(tool_id, 0, 0, false)
+
+func use_job_tool(x: int, y: int, pressed: bool, job_id: int) -> void:
+    if not is_in_bounds(x, y):
+        return
+
+    if pressed:
+        return
+
+    if jobs_count[job_id] < 1:
+        return
+
+    var unit_index := get_unit_at(x, y)
+    if unit_index == -1:
+        return
+
+    var unit : Unit = units[unit_index]
+    if unit.has_job(job_id):
+        return
+    
+    add_job(unit, job_id)
+    play_sound(config.sound_assign_job)
+    jobs_count[job_id] -= 1
 
 func set_toggle_debug_visibility(value: bool) -> void:
     collision_sprite.visible = value
@@ -612,13 +586,21 @@ func tick() -> void:
             var timer_done : int = now_tick == job.started_at + JOB_EXPLODE_DURATION
             if timer_done:
                 unit.set_text("")
+                if is_grounded:
+                    unit.state = Unit.STATES.IDLE
+                    unit.state_entered_at = now_tick
+                    unit.play("explode")
                 play_sound(config.sound_deathrattle)
 
             var animation_done : int = now_tick == job.started_at + JOB_EXPLODE_DURATION + JOB_EXPLODE_ANIM_DURATION
             if animation_done:
                 unit.status = Unit.STATUSES.DEAD
-                paint_circle(unit.position.x, unit.position.y, 12, PIXELS.EMPTY)
-                play_sound(config.sound_explode, rand_range(1.0, 1.1), rand_range(0.0, 0.2))
+                play_sound(config.sound_explode, rand_range(1.0, 1.1))
+                paint_circle(unit.position.x, unit.position.y, 9, PIXELS.EMPTY)
+                var dust_particle = ResourceLoader.load("res://Prefabs/ExplosionDust.tscn").instance()
+                dust_particle.position = unit.position
+                dust_particle.emitting = true
+                scaler_node.add_child(dust_particle)
 
         match unit.state:
             Unit.STATES.FALLING:
@@ -647,6 +629,9 @@ func tick() -> void:
                         destination.y += 0.3
                     else:
                         destination.y += 1
+
+            Unit.STATES.IDLE:
+                pass
 
             Unit.STATES.WALKING:
                 if is_grounded:
@@ -775,6 +760,8 @@ func spawn_unit(x: int, y: int) -> Unit:
 
     var unit : Unit = config.unit_prefab.instance()
     unit.name = "Unit %s" % units_spawned
+    unit.state = Unit.STATES.FALLING
+    unit.state_entered_at = now_tick
     unit.position.x = x
     unit.position.y = y - unit.height / 2
     unit.play("fall")
@@ -890,10 +877,9 @@ static func calculate_position(index: int, width: int) -> Vector2:
 func to_viewport_position(pos: Vector2) -> Vector2:
     return pos - camera.position
 
-func play_sound(sound: AudioStream, pitch: float = 1.0, delay: float = 0) -> void:
+func play_sound(sound: AudioStream, pitch: float = 1.0) -> void:
     audio_player_sound.stream = sound
     audio_player_sound.pitch_scale = pitch
-    yield(get_tree().create_timer(delay), "timeout")
     audio_player_sound.play()
 
 func add_job(unit: Unit, job_id: int) -> void:

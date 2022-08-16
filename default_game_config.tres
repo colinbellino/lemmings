@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=19 format=2]
+[gd_resource type="Resource" load_steps=20 format=2]
 
 [ext_resource path="res://Scripts/GameConfig.gd" type="Script" id=1]
 [ext_resource path="res://Levels/level_00.tres" type="Resource" id=2]
@@ -18,10 +18,11 @@
 [ext_resource path="res://Audio/Sounds/LETSGO.WAV" type="AudioStream" id=16]
 [ext_resource path="res://Audio/Sounds/OHNO.WAV" type="AudioStream" id=17]
 [ext_resource path="res://Audio/Sounds/DOOR.WAV" type="AudioStream" id=18]
+[ext_resource path="res://Levels/level_99.tres" type="Resource" id=19]
 
 [resource]
 script = ExtResource( 1 )
-levels = [ ExtResource( 2 ), ExtResource( 3 ), ExtResource( 7 ) ]
+levels = [ ExtResource( 19 ), ExtResource( 2 ), ExtResource( 3 ), ExtResource( 7 ) ]
 cursor_default_x1 = ExtResource( 10 )
 cursor_default_x2 = ExtResource( 11 )
 cursor_default_x4 = ExtResource( 5 )
