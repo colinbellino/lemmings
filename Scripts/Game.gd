@@ -40,7 +40,7 @@ signal level_unloaded
 signal level_loaded
 
 const GAME_SCALE : int = 6
-const TICK_SPEED : int = 50
+const TICK_SPEED : int = 70
 const TIME_SCALE : int = 1
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
@@ -89,8 +89,8 @@ var is_ticking : bool
 var game_scale : int
 var next_tick_at : float
 var tool_primary : int = TOOLS.JOB_DIG_VERTICAL
-var tool_secondary : int = TOOLS.PAINT_CIRCLE
-var tool_tertiary : int = TOOLS.PAINT_RECT
+var tool_secondary : int = TOOLS.PAINT_RECT
+var tool_tertiary : int = TOOLS.ERASE_RECT
 var mouse_button_pressed : int
 var debug_is_visible : bool
 var global_explosion_at : int
@@ -182,7 +182,7 @@ func _process(delta: float) -> void:
             scaler_node.scale = Vector2(game_scale, game_scale)
 
         if Input.is_key_pressed(KEY_SHIFT):
-            Engine.time_scale = TIME_SCALE * 6
+            Engine.time_scale = TIME_SCALE * 20
         else:
             Engine.time_scale = TIME_SCALE
 
@@ -558,6 +558,11 @@ func tick() -> void:
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
 
+        var c = Color.blue
+        c.a = 0.75
+        debug_draw.add_rect(unit.get_bounds(), c)
+        unit.speed_scale = TICK_SPEED / 50
+
         if unit.has_job(JOBS.EXPLODE):
             var job = unit.jobs[JOBS.EXPLODE]
             if now_tick <= job.started_at + JOB_EXPLODE_DURATION:
@@ -585,6 +590,10 @@ func tick() -> void:
                 scaler_node.add_child(dust_particle)
 
         match unit.state:
+
+            Unit.STATES.IDLE:
+                pass
+
             Unit.STATES.FALLING:
                 unit.jobs.erase(JOBS.DIG_VERTICAL)
                 unit.jobs.erase(JOBS.DIG_HORIZONTAL)
@@ -616,20 +625,29 @@ func tick() -> void:
                     else:
                         destination.y += 1
 
-            Unit.STATES.IDLE:
-                pass
-
             Unit.STATES.WALKING:
                 if is_grounded:
-                    # TODO: if have wall in front
                     if unit.has_job(JOBS.DIG_HORIZONTAL):
-                        unit.play("dig_horizontal")
+                        # TODO: only if have wall in front
                         var job = unit.jobs[JOBS.DIG_HORIZONTAL]
-                        var is_not_done : int = now_tick < job.started_at + job.duration
-                        if is_not_done:
-                            var tick = (now_tick - job.started_at)
-                            if tick % JOB_DIG_HORIZONTAL_STEP == 0:
-                                paint_circle(unit.position.x + 3 * unit.direction, unit.position.y, unit.height / 2, PIXELS.EMPTY)
+                        var job_first_tick = now_tick == job.started_at
+                        if job_first_tick:
+                            unit.play("dig_horizontal")
+                            unit.stop()
+                        
+                        var is_done : int = now_tick >= job.started_at + job.duration
+                        if not is_done:
+                            var job_tick = (now_tick - job.started_at)
+                            unit.frame = job_tick % unit.frames.get_frame_count("dig_horizontal")
+
+                            # Dig only on the frames where the unit is digging in animation
+                            if (unit.frame == 3 || unit.frame == 19):
+                                paint_circle(unit.position.x + 4 * unit.direction, unit.position.y, unit.height / 2, PIXELS.EMPTY)
+
+                            # Move only on the frames where the unit moves forward in animation
+                            if (unit.frame == 11 || unit.frame == 12 || unit.frame == 13 || unit.frame == 14 ||
+                                unit.frame == 27 || unit.frame == 28 || unit.frame == 29 || unit.frame == 30
+                            ):
                                 destination.x += 1 * unit.direction
 
                     elif unit.has_job(JOBS.DIG_VERTICAL):

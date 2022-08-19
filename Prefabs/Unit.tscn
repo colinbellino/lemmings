@@ -589,7 +589,6 @@ animations = [ {
 z_index = 1
 frames = SubResource( 10 )
 animation = "dig_horizontal"
-frame = 30
 offset = Vector2( 0, -2 )
 script = ExtResource( 2 )
 
