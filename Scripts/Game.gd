@@ -182,10 +182,10 @@ func _process(delta: float) -> void:
             spawn_rate = clamp(spawn_rate + 10, 10, 100)
         if Input.is_action_just_released("ui_up"):
             spawn_rate = clamp(spawn_rate - 10, 10, 100)
-        if Input.is_action_pressed("ui_left"):
-            camera.position.x = clamp(camera.position.x - 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
-        if Input.is_action_pressed("ui_right"):
-            camera.position.x = clamp(camera.position.x + 0.5, 0, map_width - camera.get_viewport().size.x / game_scale)
+        if Input.is_action_just_released("ui_left"):
+            camera.position.x = clamp(camera.position.x - 10, 0, map_width - camera.get_viewport().size.x / game_scale)
+        if Input.is_action_just_released("ui_right"):
+            camera.position.x = clamp(camera.position.x + 10, 0, map_width - camera.get_viewport().size.x / game_scale)
 
         if Input.is_action_just_released("ui_accept"):
             game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
