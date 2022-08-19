@@ -154,6 +154,16 @@ func _process(delta: float) -> void:
         is_ticking = true
         start_level()
         
+    if Input.is_action_just_released("debug_11"):
+        print("Previous level")
+        unload_level()
+        yield(self, "level_unloaded")
+        current_level -= 1
+        load_level(config.levels[current_level])
+        yield(self, "level_loaded")
+        is_ticking = true
+        start_level()
+
     if Input.is_action_just_released("debug_12"):
         print("Next level")
         unload_level()
