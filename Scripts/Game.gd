@@ -500,7 +500,6 @@ func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> v
     if pressed:
         return
 
-    print("use_job_tool: ", [job_id, jobs_count])
     if jobs_count[job_id] < 1:
         return
 
@@ -510,6 +509,9 @@ func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> v
 
     var unit : Unit = units[unit_index]
     if unit.has_job(job_id):
+        return
+
+    if not can_add_job(unit, job_id):
         return
     
     add_job(unit, job_id)
@@ -567,11 +569,6 @@ func tick() -> void:
 
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
-
-        var c = Color.blue
-        c.a = 0.75
-        debug_draw.add_rect(unit.get_bounds(), c)
-        unit.speed_scale = TICK_SPEED / 50
 
         if unit.has_job(JOBS.EXPLODE):
             var job = unit.jobs[JOBS.EXPLODE]
@@ -638,13 +635,14 @@ func tick() -> void:
             Unit.STATES.WALKING:
                 if is_grounded:
                     if unit.has_job(JOBS.DIG_HORIZONTAL):
-                        # TODO: only if have wall in front
                         var job = unit.jobs[JOBS.DIG_HORIZONTAL]
+
                         var job_first_tick = now_tick == job.started_at
                         if job_first_tick:
+                            print("dig start")
                             unit.play("dig_horizontal")
                             unit.stop()
-                        
+                            
                         var is_done : int = now_tick >= job.started_at + job.duration
                         if not is_done:
                             var job_tick = (now_tick - job.started_at)
@@ -660,7 +658,9 @@ func tick() -> void:
                             ):
                                 destination.x += 1 * unit.direction
 
-                    elif unit.has_job(JOBS.DIG_VERTICAL):
+                        continue
+
+                    if unit.has_job(JOBS.DIG_VERTICAL):
                         unit.play("dig_vertical")
                         var job = unit.jobs[JOBS.DIG_VERTICAL]
                         if (now_tick - job.started_at) % JOB_DIG_VERTICAL_STEP == 0:
@@ -672,7 +672,9 @@ func tick() -> void:
                             if is_not_done:
                                 destination.y += 1
 
-                    elif unit.has_job(JOBS.BLOCK):
+                        continue
+
+                    if unit.has_job(JOBS.BLOCK):
                         var job = unit.jobs[JOBS.BLOCK]
                         var rect = Rect2(unit.position.x, unit.position.y, unit.width, unit.height)
                         debug_draw.add_rect(rect, Color.red)
@@ -680,38 +682,39 @@ func tick() -> void:
                             unit.play("block")
                             paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.BLOCK)
 
+                        continue
+
+                    var wall_check_pos_x : int = unit.position.x + unit.direction
+                    var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
+                    var destination_offset_y := 0
+                    var hit_wall := false
+                    
+                    for offset_y in range(0, -unit.climb_step, -1):
+                        var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
+                        debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
+                        hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXELS.BLOCK)
+
+                        if not hit_wall:
+                            destination_offset_y = offset_y
+                            break
+
+                    if hit_wall:
+                        # Turn around
+                        unit.direction *= -1
+                        unit.flip_h = unit.direction == -1
                     else:
-                        var wall_check_pos_x : int = unit.position.x + unit.direction
-                        var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
-                        var destination_offset_y := 0
-                        var hit_wall := false
-                        
-                        for offset_y in range(0, -unit.climb_step, -1):
-                            var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
-                            debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
-                            hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXELS.BLOCK)
-
-                            if not hit_wall:
-                                destination_offset_y = offset_y
+                        for offset_y in range(1, unit.climb_step):
+                            var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
+                            debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
+                            if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXELS.BLOCK):
                                 break
+                            destination_offset_y = offset_y
 
-                        if hit_wall:
-                            # Turn around
-                            unit.direction *= -1
-                            unit.flip_h = unit.direction == -1
-                        else:
-                            for offset_y in range(1, unit.climb_step):
-                                var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
-                                debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
-                                if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXELS.BLOCK):
-                                    break
-                                destination_offset_y = offset_y
+                        # Walk forward
+                        destination.y += destination_offset_y
+                        destination.x += unit.direction
 
-                            # Walk forward
-                            destination.y += destination_offset_y
-                            destination.x += unit.direction
-
-                            unit.play("walk")
+                        unit.play("walk")
                 else:
                     unit.state = Unit.STATES.FALLING
                     unit.state_entered_at = now_tick
@@ -789,6 +792,7 @@ func spawn_unit(x: int, y: int) -> Unit:
     unit.state_entered_at = now_tick
     unit.position.x = x
     unit.position.y = y - unit.height / 2
+    unit.speed_scale = TICK_SPEED / 50
     unit.play("fall")
 
     units[units_spawned] = unit
@@ -937,3 +941,12 @@ func add_job(unit: Unit, job_id: int) -> void:
         _: 
             print("Job not implemented: ", job_id)
             return
+
+func can_add_job(unit: Unit, job_id: int) -> bool:
+    match job_id:
+        JOBS.DIG_HORIZONTAL:
+            var wall_in_front = has_flag(unit.position.x + 6 * unit.direction, unit.position.y, PIXELS.BLOCK)
+            return wall_in_front
+
+        _: 
+            return true
