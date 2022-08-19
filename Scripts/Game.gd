@@ -639,7 +639,6 @@ func tick() -> void:
 
                         var job_first_tick = now_tick == job.started_at
                         if job_first_tick:
-                            print("dig start")
                             unit.play("dig_horizontal")
                             unit.stop()
                             
@@ -650,7 +649,13 @@ func tick() -> void:
 
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 3 || unit.frame == 19):
-                                paint_circle(unit.position.x + 4 * unit.direction, unit.position.y, unit.height / 2, PIXELS.EMPTY)
+                                var pos_x := unit.position.x + 4 * unit.direction
+                                var dig_width := unit.height / 2
+                                paint_circle(pos_x, unit.position.y, dig_width, PIXELS.EMPTY)
+
+                                var wall_in_front = has_flag(pos_x + dig_width + 1, unit.position.y + dig_width - 1, PIXELS.BLOCK)
+                                if not wall_in_front:
+                                    unit.jobs.erase(JOBS.DIG_HORIZONTAL)
 
                             # Move only on the frames where the unit moves forward in animation
                             if (unit.frame == 11 || unit.frame == 12 || unit.frame == 13 || unit.frame == 14 ||
