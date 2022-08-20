@@ -1,4 +1,4 @@
-[gd_scene load_steps=161 format=2]
+[gd_scene load_steps=169 format=2]
 
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=1]
 [ext_resource path="res://Scripts/Unit.gd" type="Script" id=2]
@@ -99,6 +99,38 @@ region = Rect2( 96, 32, 16, 16 )
 [sub_resource type="AtlasTexture" id=46]
 atlas = ExtResource( 3 )
 region = Rect2( 112, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=179]
+atlas = ExtResource( 3 )
+region = Rect2( 128, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=180]
+atlas = ExtResource( 3 )
+region = Rect2( 144, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=181]
+atlas = ExtResource( 3 )
+region = Rect2( 160, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=182]
+atlas = ExtResource( 3 )
+region = Rect2( 176, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=183]
+atlas = ExtResource( 3 )
+region = Rect2( 192, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=184]
+atlas = ExtResource( 3 )
+region = Rect2( 208, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=185]
+atlas = ExtResource( 3 )
+region = Rect2( 224, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=186]
+atlas = ExtResource( 3 )
+region = Rect2( 240, 32, 16, 16 )
 
 [sub_resource type="AtlasTexture" id=67]
 atlas = ExtResource( 3 )
@@ -640,6 +672,11 @@ animations = [ {
 "name": "climb",
 "speed": 10.0
 }, {
+"frames": [ SubResource( 179 ), SubResource( 180 ), SubResource( 181 ), SubResource( 182 ), SubResource( 183 ), SubResource( 184 ), SubResource( 185 ), SubResource( 186 ) ],
+"loop": false,
+"name": "climb_end",
+"speed": 10.0
+}, {
 "frames": [ SubResource( 67 ), SubResource( 68 ), SubResource( 69 ), SubResource( 70 ), SubResource( 71 ), SubResource( 72 ), SubResource( 73 ), SubResource( 74 ), SubResource( 75 ), SubResource( 76 ), SubResource( 77 ), SubResource( 78 ), SubResource( 79 ), SubResource( 80 ), SubResource( 81 ), SubResource( 82 ) ],
 "loop": false,
 "name": "dead_fall",
@@ -689,8 +726,7 @@ animations = [ {
 [node name="Unit" type="AnimatedSprite"]
 z_index = 1
 frames = SubResource( 10 )
-animation = "mine"
-frame = 11
+animation = "climb_end"
 offset = Vector2( 0, -2 )
 script = ExtResource( 2 )
 

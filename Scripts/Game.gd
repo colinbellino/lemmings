@@ -494,6 +494,9 @@ func select_tool(tool_id: int) -> void:
         hud.select_job(tool_id)
         return
 
+    if tool_id == TOOLS.SPAWN_UNIT:
+        tool_primary = tool_id
+
     use_tool(tool_id, 0, 0, false)
 
 func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> void:
@@ -637,16 +640,30 @@ func tick() -> void:
                         destination.y += 1
 
             Unit.STATES.CLIMBING:
-                # TODO: stop when end of the wall reached (not ceiling)
+                var wall_pos_x := unit.position.x + 4 * unit.direction
+                var hit_top_wall := has_flag(wall_pos_x, unit.position.y, PIXELS.EMPTY)
                 var hit_ceiling := has_flag(unit.position.x, unit.position.y - unit.height / 2, PIXELS.BLOCK)
+
                 if hit_ceiling:
                     unit.direction *= -1
                     unit.state = Unit.STATES.FALLING
                     unit.state_entered_at = now_tick
+                elif hit_top_wall:
+                    unit.state = Unit.STATES.CLIMBING_END
+                    unit.state_entered_at = now_tick
                 else:
                     unit.play("climb")
                     destination.y -= 1
-                
+                    
+            Unit.STATES.CLIMBING_END:
+                unit.play("climb_end")
+                var wall_pos_x := unit.position.x + 4 * unit.direction
+                var frames_count := unit.frames.get_frame_count("climb_end")
+                var done := unit.frame == frames_count - 1
+                if done:
+                    destination.x = wall_pos_x
+                    unit.state = Unit.STATES.WALKING
+                    unit.state_entered_at = now_tick
 
             Unit.STATES.WALKING:
                 if is_grounded:
