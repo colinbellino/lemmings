@@ -48,6 +48,8 @@ const JOB_DIG_HORIZONTAL_DURATION : int = 750
 const JOB_DIG_HORIZONTAL_STEP : int = 10
 const JOB_DIG_VERTICAL_DURATION : int = 300
 const JOB_DIG_VERTICAL_STEP : int = 10
+const JOB_MINE_DURATION : int = 300
+const JOB_MINE_STEP : int = 10
 const JOB_EXPLODE_DURATION : int = 100
 const JOB_EXPLODE_ANIM_DURATION : int = 27
 const JOB_EXPLODE_STEP : int = 20
@@ -437,7 +439,7 @@ func set_cursor(cursor_id: int) -> void:
 
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.JOB_FLOAT, TOOLS.JOB_EXPLODE, TOOLS.JOB_BLOCK, TOOLS.JOB_DIG_HORIZONTAL, TOOLS.JOB_DIG_VERTICAL:
+        TOOLS.JOB_FLOAT, TOOLS.JOB_EXPLODE, TOOLS.JOB_BLOCK, TOOLS.JOB_DIG_HORIZONTAL, TOOLS.JOB_MINE, TOOLS.JOB_DIG_VERTICAL:
             use_job_tool(x, y, pressed, tool_id, JOBS.values()[tool_id])
             return
 
@@ -602,9 +604,10 @@ func tick() -> void:
                 pass
 
             Unit.STATES.FALLING:
-                unit.jobs.erase(JOBS.DIG_VERTICAL)
-                unit.jobs.erase(JOBS.DIG_HORIZONTAL)
                 unit.jobs.erase(JOBS.BLOCK)
+                unit.jobs.erase(JOBS.DIG_HORIZONTAL)
+                unit.jobs.erase(JOBS.MINE)
+                unit.jobs.erase(JOBS.DIG_VERTICAL)
 
                 if is_grounded:
                     if now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
@@ -662,6 +665,39 @@ func tick() -> void:
                                 unit.frame == 27 || unit.frame == 28 || unit.frame == 29 || unit.frame == 30
                             ):
                                 destination.x += 1 * unit.direction
+
+                        continue
+
+                    if unit.has_job(JOBS.MINE):
+                        var job = unit.jobs[JOBS.MINE]
+
+                        var job_first_tick = now_tick == job.started_at
+                        if job_first_tick:
+                            unit.play("mine")
+                            unit.stop()
+                            
+                        var is_done : int = now_tick >= job.started_at + job.duration
+                        if not is_done:
+                            var job_tick = (now_tick - job.started_at)
+                            unit.frame = job_tick % unit.frames.get_frame_count("mine")
+
+                            # Dig only on the frames where the unit is digging in animation
+                            if (unit.frame == 3 || unit.frame == 19):
+                                var pos_x := unit.position.x + 6 * unit.direction
+                                var pos_y := unit.position.y + 4
+                                var dig_radius := unit.height / 2
+                                paint_circle(pos_x, pos_y, dig_radius, PIXELS.EMPTY)
+
+                                # var wall_in_front = has_flag(pos_x + dig_radius - 1, unit.position.y + dig_radius - 1, PIXELS.BLOCK)
+                                # if not wall_in_front:
+                                #     unit.jobs.erase(JOBS.MINE)
+
+                            # Move only on the frames where the unit moves forward in animation
+                            if (unit.frame == 11 || unit.frame == 12 || unit.frame == 13 || unit.frame == 14 ||
+                                unit.frame == 27 || unit.frame == 28 || unit.frame == 29 || unit.frame == 30
+                            ):
+                                destination.x += 1 * unit.direction
+                                destination.y += 1 * unit.direction
 
                         continue
 
@@ -936,6 +972,11 @@ func add_job(unit: Unit, job_id: int) -> void:
         JOBS.DIG_HORIZONTAL:
             unit.jobs[JOBS.DIG_HORIZONTAL] = {
                 duration = JOB_DIG_HORIZONTAL_DURATION,
+                started_at = now_tick,
+            }
+        JOBS.MINE:
+            unit.jobs[JOBS.MINE] = {
+                duration = JOB_MINE_DURATION,
                 started_at = now_tick,
             }
         JOBS.DIG_VERTICAL:
