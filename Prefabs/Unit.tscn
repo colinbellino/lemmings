@@ -1,4 +1,4 @@
-[gd_scene load_steps=169 format=2]
+[gd_scene load_steps=170 format=2]
 
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=1]
 [ext_resource path="res://Scripts/Unit.gd" type="Script" id=2]
@@ -131,6 +131,10 @@ region = Rect2( 224, 32, 16, 16 )
 [sub_resource type="AtlasTexture" id=186]
 atlas = ExtResource( 3 )
 region = Rect2( 240, 32, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=187]
+atlas = ExtResource( 3 )
+region = Rect2( 0, 0, 16, 16 )
 
 [sub_resource type="AtlasTexture" id=67]
 atlas = ExtResource( 3 )
@@ -672,7 +676,7 @@ animations = [ {
 "name": "climb",
 "speed": 10.0
 }, {
-"frames": [ SubResource( 179 ), SubResource( 180 ), SubResource( 181 ), SubResource( 182 ), SubResource( 183 ), SubResource( 184 ), SubResource( 185 ), SubResource( 186 ) ],
+"frames": [ SubResource( 179 ), SubResource( 180 ), SubResource( 181 ), SubResource( 182 ), SubResource( 183 ), SubResource( 184 ), SubResource( 185 ), SubResource( 186 ), SubResource( 187 ) ],
 "loop": false,
 "name": "climb_end",
 "speed": 10.0

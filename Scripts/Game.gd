@@ -179,6 +179,14 @@ func _process(delta: float) -> void:
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
+    if Input.is_action_just_released("ui_select"):
+        is_ticking = !is_ticking
+        if is_ticking:
+            Engine.time_scale = TIME_SCALE
+        else:
+            Engine.time_scale = 0
+        print("Toggling pause")
+
     if is_ticking:
         if Input.is_action_just_released("ui_down"):
             spawn_rate = clamp(spawn_rate + 10, 10, 100)
@@ -226,6 +234,14 @@ func _process(delta: float) -> void:
         if now >= next_tick_at:
             tick()
             next_tick_at = now + TICK_SPEED
+
+    else:
+        if OS.is_debug_build():
+            if Input.is_action_just_released("ui_left"):
+                pass
+            if Input.is_action_just_released("ui_right"):
+                print("tick")
+                tick()
 
 func start_game() -> void:
     title.close()
@@ -533,9 +549,6 @@ func set_toggle_debug_visibility(value: bool) -> void:
     debug_is_visible = value
 
 func tick() -> void: 
-    if not is_ticking:
-        return
-
     if spawn_is_active:
         if now_tick % spawn_rate == 0:
             spawn_unit(entrance_position.x, entrance_position.y)
@@ -575,6 +588,8 @@ func tick() -> void:
 
         var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
+
+        debug_draw.add_rect(Rect2(unit.position.x, unit.position.y, 1, 1), Color.red)
 
         if unit.has_job(JOBS.EXPLODE):
             var job = unit.jobs[JOBS.EXPLODE]
@@ -641,7 +656,7 @@ func tick() -> void:
 
             Unit.STATES.CLIMBING:
                 var wall_pos_x := unit.position.x + 4 * unit.direction
-                var hit_top_wall := has_flag(wall_pos_x, unit.position.y, PIXELS.EMPTY)
+                var hit_top_wall := has_flag(wall_pos_x, unit.position.y - 1, PIXELS.EMPTY)
                 var hit_ceiling := has_flag(unit.position.x, unit.position.y - unit.height / 2, PIXELS.BLOCK)
 
                 if hit_ceiling:
@@ -657,11 +672,15 @@ func tick() -> void:
                     
             Unit.STATES.CLIMBING_END:
                 unit.play("climb_end")
-                var wall_pos_x := unit.position.x + 4 * unit.direction
+                var state_tick := now_tick - unit.state_entered_at
                 var frames_count := unit.frames.get_frame_count("climb_end")
+                unit.frame = state_tick % unit.frames.get_frame_count("climb_end")
+
                 var done := unit.frame == frames_count - 1
                 if done:
-                    destination.x = wall_pos_x
+                    print("done")
+                    destination.x = unit.position.x + 4 * unit.direction
+                    destination.y = unit.position.y - 5
                     unit.state = Unit.STATES.WALKING
                     unit.state_entered_at = now_tick
 
@@ -687,7 +706,7 @@ func tick() -> void:
                             
                         var is_done : int = now_tick >= job.started_at + job.duration
                         if not is_done:
-                            var job_tick = (now_tick - job.started_at)
+                            var job_tick = now_tick - job.started_at
                             unit.frame = job_tick % unit.frames.get_frame_count("dig_horizontal")
 
                             # Dig only on the frames where the unit is digging in animation
