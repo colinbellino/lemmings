@@ -330,6 +330,7 @@ func load_level(level: Level) -> void:
         printerr("Could not find entrance position.")
         quit_game()
         return
+    print("exit_position: ", exit_position)
     if exit_position == Vector2.ZERO:
         printerr("Could not find exit position.")
         quit_game()
@@ -697,7 +698,7 @@ func tick() -> void:
                                 unit.frame == 27 || unit.frame == 28 || unit.frame == 29 || unit.frame == 30
                             ):
                                 destination.x += 1 * unit.direction
-                                destination.y += 1 * unit.direction
+                                destination.y += 1
 
                         continue
 
