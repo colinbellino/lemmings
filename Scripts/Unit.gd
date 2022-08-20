@@ -8,6 +8,7 @@ enum STATES {
     WALKING,
     FALLING,
     FLOATING,
+    CLIMBING,
     DEAD_FALL,
 }
 

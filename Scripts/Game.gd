@@ -440,7 +440,7 @@ func set_cursor(cursor_id: int) -> void:
 
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.JOB_FLOAT, TOOLS.JOB_EXPLODE, TOOLS.JOB_BLOCK, TOOLS.JOB_DIG_HORIZONTAL, TOOLS.JOB_MINE, TOOLS.JOB_DIG_VERTICAL:
+        TOOLS.JOB_CLIMB, TOOLS.JOB_FLOAT, TOOLS.JOB_EXPLODE, TOOLS.JOB_BLOCK, TOOLS.JOB_DIG_HORIZONTAL, TOOLS.JOB_MINE, TOOLS.JOB_DIG_VERTICAL:
             use_job_tool(x, y, pressed, tool_id, JOBS.values()[tool_id])
             return
 
@@ -636,8 +636,30 @@ func tick() -> void:
                     else:
                         destination.y += 1
 
+            Unit.STATES.CLIMBING:
+                # TODO: stop when end of the wall reached (not ceiling)
+                var hit_ceiling := has_flag(unit.position.x, unit.position.y - unit.height / 2, PIXELS.BLOCK)
+                if hit_ceiling:
+                    unit.direction *= -1
+                    unit.state = Unit.STATES.FALLING
+                    unit.state_entered_at = now_tick
+                else:
+                    unit.play("climb")
+                    destination.y -= 1
+                
+
             Unit.STATES.WALKING:
                 if is_grounded:
+                    if unit.has_job(JOBS.CLIMB):
+                        var job = unit.jobs[JOBS.CLIMB]
+
+                        var pos_x := unit.position.x + 4 * unit.direction
+
+                        var wall_in_front = has_flag(pos_x, unit.position.y, PIXELS.BLOCK)
+                        if wall_in_front:
+                            unit.state = Unit.STATES.CLIMBING
+                            unit.state_entered_at = now_tick
+
                     if unit.has_job(JOBS.DIG_HORIZONTAL):
                         var job = unit.jobs[JOBS.DIG_HORIZONTAL]
 
@@ -743,7 +765,6 @@ func tick() -> void:
                     if hit_wall:
                         # Turn around
                         unit.direction *= -1
-                        unit.flip_h = unit.direction == -1
                     else:
                         for offset_y in range(1, unit.climb_step):
                             var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
@@ -769,6 +790,7 @@ func tick() -> void:
                 if now_tick == unit.state_entered_at + FALL_SPLAT_ANIM_DURATION:
                     unit.status = Unit.STATUSES.DEAD
                     
+        unit.flip_h = unit.direction == -1
         unit.position = destination
         
         for job_id in unit.jobs.keys():
@@ -955,6 +977,11 @@ func play_sound(sound: AudioStream, pitch: float = 1.0) -> void:
 
 func add_job(unit: Unit, job_id: int) -> void:
     match job_id:
+        JOBS.CLIMB:
+            unit.jobs[JOBS.CLIMB] = {
+                duration = -1,
+                started_at = now_tick,
+            }
         JOBS.FLOAT:
             unit.jobs[JOBS.FLOAT] = {
                 duration = -1,
