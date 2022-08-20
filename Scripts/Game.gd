@@ -650,10 +650,10 @@ func tick() -> void:
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 3 || unit.frame == 19):
                                 var pos_x := unit.position.x + 4 * unit.direction
-                                var dig_width := unit.height / 2
-                                paint_circle(pos_x, unit.position.y, dig_width, PIXELS.EMPTY)
+                                var dig_radius := unit.height / 2
+                                paint_circle(pos_x, unit.position.y, dig_radius, PIXELS.EMPTY)
 
-                                var wall_in_front = has_flag(pos_x + dig_width + 1, unit.position.y + dig_width - 1, PIXELS.BLOCK)
+                                var wall_in_front = has_flag(pos_x + dig_radius - 1, unit.position.y + dig_radius - 1, PIXELS.BLOCK)
                                 if not wall_in_front:
                                     unit.jobs.erase(JOBS.DIG_HORIZONTAL)
 
