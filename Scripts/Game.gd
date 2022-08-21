@@ -87,9 +87,6 @@ onready var transitions : Transitions = get_node("%Transitions")
 onready var action0_button : Button = get_node("%Action0")
 onready var action1_button : Button = get_node("%Action1")
 onready var action2_button : Button = get_node("%Action2")
-onready var units_spawned_label : Label = get_node("%UnitsSpawnedLabel")
-onready var units_exited_label : Label = get_node("%UnitsExitedLabel")
-onready var units_dead_label : Label = get_node("%UnitsDeadLabel")
 onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
 onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
@@ -879,9 +876,9 @@ func tick() -> void:
             start_level()
 
     # Update UI
-    units_spawned_label.text = "Out: %s" % units_spawned
-    units_exited_label.text = "In: %s" % units_exited
-    units_dead_label.text = "Dead: %s" % units_dead
+    hud.set_spawned_label("Out: %s" % units_spawned)
+    hud.set_exited_label("In: %s" % units_exited)
+    hud.set_dead_label("Dead: %s" % units_dead)
 
 func spawn_unit(x: int, y: int) -> Unit: 
     if units_spawned >= units.size():

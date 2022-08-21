@@ -1,13 +1,12 @@
-[gd_scene load_steps=9 format=2]
+[gd_scene load_steps=8 format=2]
 
 [ext_resource path="res://Scripts/Game.gd" type="Script" id=1]
 [ext_resource path="res://Scripts/DebugDraw.gd" type="Script" id=2]
-[ext_resource path="res://Prefabs/JobButton.tscn" type="PackedScene" id=3]
+[ext_resource path="res://Prefabs/HUD.tscn" type="PackedScene" id=3]
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=4]
 [ext_resource path="res://Scripts/Transitions.gd" type="Script" id=5]
 [ext_resource path="res://Scripts/Title.gd" type="Script" id=6]
 [ext_resource path="res://Art/title.png" type="Texture" id=7]
-[ext_resource path="res://Scripts/HUD.gd" type="Script" id=8]
 
 [node name="Game" type="Node2D"]
 position = Vector2( 0, 2 )
@@ -169,94 +168,7 @@ margin_bottom = 792.0
 custom_fonts/font = ExtResource( 4 )
 text = "Quit"
 
-[node name="HUD" type="CanvasLayer" parent="."]
-unique_name_in_owner = true
-script = ExtResource( 8 )
-
-[node name="Root" type="Panel" parent="HUD"]
-anchor_top = 1.0
-anchor_right = 1.0
-anchor_bottom = 1.0
-margin_top = -120.0
-
-[node name="JobButton1" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-
-[node name="JobButton2" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 96.0
-margin_right = 160.0
-
-[node name="JobButton3" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 176.0
-margin_right = 240.0
-
-[node name="JobButton4" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 256.0
-margin_right = 320.0
-
-[node name="JobButton5" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 336.0
-margin_right = 400.0
-
-[node name="JobButton6" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 416.0
-margin_right = 480.0
-
-[node name="JobButton7" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 496.0
-margin_right = 560.0
-
-[node name="JobButton8" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 576.0
-margin_right = 640.0
-
-[node name="ExplodeButton" parent="HUD/Root" instance=ExtResource( 3 )]
-unique_name_in_owner = true
-margin_left = 656.0
-margin_right = 720.0
-
-[node name="Label" parent="HUD/Root/ExplodeButton" index="0"]
-text = ""
-
-[node name="Sprite" parent="HUD/Root/ExplodeButton" index="1"]
-region_rect = Rect2( 144, 0, 16, 48 )
-
-[node name="UnitsSpawnedLabel" type="Label" parent="HUD/Root"]
-unique_name_in_owner = true
-margin_left = 1806.0
-margin_top = 16.0
-margin_right = 1906.0
-margin_bottom = 58.0
-custom_fonts/font = ExtResource( 4 )
-text = "Out: 99"
-align = 2
-
-[node name="UnitsExitedLabel" type="Label" parent="HUD/Root"]
-unique_name_in_owner = true
-margin_left = 1806.0
-margin_top = 48.0
-margin_right = 1906.0
-margin_bottom = 90.0
-custom_fonts/font = ExtResource( 4 )
-text = "In: 99"
-align = 2
-
-[node name="UnitsDeadLabel" type="Label" parent="HUD/Root"]
-unique_name_in_owner = true
-margin_left = 1806.0
-margin_top = 80.0
-margin_right = 1906.0
-margin_bottom = 122.0
-custom_fonts/font = ExtResource( 4 )
-text = "Dead: 99"
-align = 2
+[node name="HUD" parent="." instance=ExtResource( 3 )]
 
 [node name="Scaler" type="Node2D" parent="."]
 unique_name_in_owner = true
@@ -282,5 +194,3 @@ bus = "Music"
 [node name="SoundAudioPlayer" type="AudioStreamPlayer" parent="."]
 unique_name_in_owner = true
 bus = "Sounds"
-
-[editable path="HUD/Root/ExplodeButton"]

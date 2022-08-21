@@ -15,6 +15,9 @@ onready var job_buttons : Array = [
     get_node("%JobButton8"),
 ]
 onready var explode_button : Button = get_node("%ExplodeButton")
+onready var units_spawned_label : Label = get_node("%UnitsSpawnedLabel")
+onready var units_exited_label : Label = get_node("%UnitsExitedLabel")
+onready var units_dead_label : Label = get_node("%UnitsDeadLabel")
 
 signal opened
 signal closed
@@ -48,4 +51,13 @@ func select_job(tool_id: int) -> void:
     job_buttons[tool_id - 1].grab_focus()
 
 func explode_button_pressed() -> void:
-    emit_signal("tool_selected", TOOLS.EXPLODE_ALL)
+    emit_signal("tool_selected", TOOLS.BOMB_ALL)
+
+func set_spawned_label(value) -> void: 
+    units_spawned_label.text = value
+
+func set_exited_label(value) -> void: 
+    units_exited_label.text = value
+    
+func set_dead_label(value) -> void: 
+    units_dead_label.text = value

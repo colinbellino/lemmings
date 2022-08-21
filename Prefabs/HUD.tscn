@@ -1,0 +1,143 @@
+[gd_scene load_steps=5 format=2]
+
+[ext_resource path="res://Prefabs/JobButton.tscn" type="PackedScene" id=1]
+[ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=3]
+[ext_resource path="res://Scripts/HUD.gd" type="Script" id=4]
+[ext_resource path="res://Art/tools.png" type="Texture" id=5]
+
+[node name="HUD" type="CanvasLayer"]
+unique_name_in_owner = true
+script = ExtResource( 4 )
+
+[node name="Root" type="Panel" parent="."]
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_top = -120.0
+
+[node name="HBoxContainer" type="HBoxContainer" parent="Root"]
+margin_left = 12.0
+margin_top = 12.0
+margin_right = 1292.0
+margin_bottom = 108.0
+
+[node name="JobButton1" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 0.0
+margin_top = 0.0
+margin_right = 156.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="JobButton2" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 160.0
+margin_top = 0.0
+margin_right = 317.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="JobButton3" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 321.0
+margin_top = 0.0
+margin_right = 477.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="JobButton4" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 481.0
+margin_top = 0.0
+margin_right = 638.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="JobButton5" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 642.0
+margin_top = 0.0
+margin_right = 798.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="JobButton6" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 802.0
+margin_top = 0.0
+margin_right = 959.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="JobButton7" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 963.0
+margin_top = 0.0
+margin_right = 1119.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="JobButton8" parent="Root/HBoxContainer" instance=ExtResource( 1 )]
+unique_name_in_owner = true
+margin_left = 1123.0
+margin_top = 0.0
+margin_right = 1280.0
+margin_bottom = 96.0
+size_flags_horizontal = 3
+
+[node name="Control" type="Control" parent="Root"]
+margin_left = -91.0
+margin_right = -51.0
+margin_bottom = 40.0
+
+[node name="UnitsSpawnedLabel" type="Label" parent="Root/Control"]
+unique_name_in_owner = true
+margin_left = 1806.0
+margin_top = 16.0
+margin_right = 1906.0
+margin_bottom = 58.0
+custom_fonts/font = ExtResource( 3 )
+text = "Out: 99"
+align = 2
+
+[node name="UnitsExitedLabel" type="Label" parent="Root/Control"]
+unique_name_in_owner = true
+margin_left = 1806.0
+margin_top = 48.0
+margin_right = 1906.0
+margin_bottom = 90.0
+custom_fonts/font = ExtResource( 3 )
+text = "In: 99"
+align = 2
+
+[node name="UnitsDeadLabel" type="Label" parent="Root/Control"]
+unique_name_in_owner = true
+margin_left = 1806.0
+margin_top = 80.0
+margin_right = 1906.0
+margin_bottom = 122.0
+custom_fonts/font = ExtResource( 3 )
+text = "Dead: 99"
+align = 2
+
+[node name="ExplodeButton" type="Button" parent="Root"]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+margin_left = -92.0
+margin_top = -48.0
+margin_right = -12.0
+margin_bottom = 48.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+size_flags_stretch_ratio = 0.0
+icon_align = 1
+
+[node name="Sprite" type="Sprite" parent="Root/ExplodeButton"]
+position = Vector2( 39, 14 )
+scale = Vector2( 3, 3 )
+texture = ExtResource( 5 )
+region_enabled = true
+region_rect = Rect2( 144, 0, 16, 48 )
