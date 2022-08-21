@@ -86,9 +86,10 @@ margin_bottom = 96.0
 size_flags_horizontal = 3
 
 [node name="Control" type="Control" parent="Root"]
-margin_left = -91.0
-margin_right = -51.0
-margin_bottom = 40.0
+margin_left = -173.0
+margin_top = -3.0
+margin_right = -133.0
+margin_bottom = 37.0
 
 [node name="UnitsSpawnedLabel" type="Label" parent="Root/Control"]
 unique_name_in_owner = true
@@ -141,3 +142,37 @@ scale = Vector2( 3, 3 )
 texture = ExtResource( 5 )
 region_enabled = true
 region_rect = Rect2( 144, 0, 16, 48 )
+
+[node name="SpawnRateUpButton" type="Button" parent="Root"]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+margin_left = -176.0
+margin_top = -48.0
+margin_right = -96.0
+margin_bottom = -2.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+size_flags_stretch_ratio = 0.0
+custom_fonts/font = ExtResource( 3 )
+text = "▲"
+icon_align = 1
+
+[node name="SpawnRateDownButton" type="Button" parent="Root"]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+margin_left = -176.0
+margin_top = 2.0
+margin_right = -96.0
+margin_bottom = 48.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+size_flags_stretch_ratio = 0.0
+custom_fonts/font = ExtResource( 3 )
+text = "▼"
+icon_align = 1

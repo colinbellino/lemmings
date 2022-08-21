@@ -197,9 +197,9 @@ func _process(delta: float) -> void:
 
     if is_ticking:
         if Input.is_action_just_released("ui_down"):
-            spawn_rate = clamp(spawn_rate + 10, 10, 100)
+            increase_spawn_rate(-10)
         if Input.is_action_just_released("ui_up"):
-            spawn_rate = clamp(spawn_rate - 10, 10, 100)
+            increase_spawn_rate(10)
         if Input.is_action_just_released("ui_left"):
             camera.position.x = clamp(camera.position.x - 10, 0, map_width - camera.get_viewport().size.x / game_scale)
         if Input.is_action_just_released("ui_right"):
@@ -265,6 +265,8 @@ func start_game() -> void:
     action1_button.connect("pressed", self, "select_tool", [TOOLS.ERASE_RECT])
     action2_button.connect("pressed", self, "select_tool", [TOOLS.SPAWN_UNIT])
     hud.connect("tool_selected", self, "select_tool")
+    hud.connect("spawn_rate_up_pressed", self, "spawn_rate_up")
+    hud.connect("spawn_rate_down_pressed", self, "spawn_rate_down")
 
     collision_image = Image.new()
 
@@ -296,6 +298,7 @@ func load_level(level: Level) -> void:
     units_max = level.units_max
     units_goal = level.units_goal
     spawn_rate = level.spawn_rate
+    increase_spawn_rate(0) # Just to make sure it's clamped to a valid value
     jobs_count = {}
     jobs_count[JOBS.CLIMBER] = level.job_climber
     jobs_count[JOBS.FLOATER] = level.job_floater
@@ -524,6 +527,16 @@ func select_tool(tool_id: int) -> void:
 
     use_tool(tool_id, 0, 0, false)
 
+func spawn_rate_up() -> void:
+    increase_spawn_rate(10)
+    
+func spawn_rate_down() -> void:
+    increase_spawn_rate(-10)
+    
+func increase_spawn_rate(value: int) -> void:
+    spawn_rate = clamp(spawn_rate + value, 10, 90) as int
+    print("spawn_rate: ", spawn_rate)
+
 func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> void:
     if not is_in_bounds(x, y):
         return
@@ -558,7 +571,7 @@ func set_toggle_debug_visibility(value: bool) -> void:
 
 func tick() -> void: 
     if spawn_is_active:
-        if now_tick % spawn_rate == 0:
+        if now_tick % (100 - spawn_rate) == 0:
             spawn_unit(entrance_position.x, entrance_position.y)
             if units_spawned >= units.size():
                 spawn_is_active = false

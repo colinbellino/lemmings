@@ -15,6 +15,8 @@ onready var job_buttons : Array = [
     get_node("%JobButton8"),
 ]
 onready var explode_button : Button = get_node("%ExplodeButton")
+onready var spawn_rate_up_button : Button = get_node("%SpawnRateUpButton")
+onready var spawn_rate_down_button : Button = get_node("%SpawnRateDownButton")
 onready var units_spawned_label : Label = get_node("%UnitsSpawnedLabel")
 onready var units_exited_label : Label = get_node("%UnitsExitedLabel")
 onready var units_dead_label : Label = get_node("%UnitsDeadLabel")
@@ -22,6 +24,8 @@ onready var units_dead_label : Label = get_node("%UnitsDeadLabel")
 signal opened
 signal closed
 signal tool_selected
+signal spawn_rate_up_pressed
+signal spawn_rate_down_pressed
 
 func _ready() -> void:
     root.modulate.a = 0.0
@@ -29,6 +33,8 @@ func _ready() -> void:
     for index in range(0, job_buttons.size()):
         job_buttons[index].connect("pressed", self, "job_button_pressed", [index])
     explode_button.connect("pressed", self, "explode_button_pressed")
+    spawn_rate_up_button.connect("pressed", self, "spawn_rate_up_button_pressed")
+    spawn_rate_down_button.connect("pressed", self, "spawn_rate_down_button_pressed")
 
 func open() -> void:
     root.modulate.a = 1.0
@@ -52,6 +58,12 @@ func select_job(tool_id: int) -> void:
 
 func explode_button_pressed() -> void:
     emit_signal("tool_selected", TOOLS.BOMB_ALL)
+
+func spawn_rate_up_button_pressed() -> void:
+    emit_signal("spawn_rate_up_pressed")
+
+func spawn_rate_down_button_pressed() -> void:
+    emit_signal("spawn_rate_down_pressed")
 
 func set_spawned_label(value) -> void: 
     units_spawned_label.text = value

@@ -9,7 +9,7 @@ export var camera_x : int
 export var camera_y : int
 export(int, 1, 100, 1) var units_max : int = 10
 export(int, 1, 100, 1) var units_goal : int = 10
-export(int, 10, 100, 1) var spawn_rate : int = 50
+export(int, 10, 90, 1) var spawn_rate : int = 50
 export var job_climber : int
 export var job_floater : int
 export var job_bomber : int
