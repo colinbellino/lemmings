@@ -132,7 +132,6 @@ color = Color( 0, 0, 0, 1 )
 [node name="Title" type="CanvasLayer" parent="."]
 unique_name_in_owner = true
 layer = 2
-visible = false
 script = ExtResource( 6 )
 
 [node name="Root" type="Control" parent="Title"]
