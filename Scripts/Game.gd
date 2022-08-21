@@ -64,10 +64,10 @@ const TICK_SPEED : int = 70
 const TIME_SCALE : int = 1
 const CURSOR_DEFAULT : int = 0
 const CURSOR_BORDER : int = 1
-
 const FALL_DURATION_FATAL : int = 55
 const FALL_DURATION_FLOAT : int = 25
 const FALL_SPLAT_ANIM_DURATION : int = 27
+const GLOBAL_EXPLOSION_DURATION : int = 20
 
 # Scene stuff
 var map_image : Image
@@ -248,7 +248,7 @@ func _process(delta: float) -> void:
             if Input.is_action_just_released("ui_left"):
                 pass
             if Input.is_action_just_released("ui_right"):
-                print("tick")
+                print("tick (manual)")
                 tick()
 
 func start_game() -> void:
@@ -353,11 +353,12 @@ func load_level(level: Level) -> void:
     collision_image.create(map_width, map_height, false, map_image.get_format())
 
     # Spawn the entrance and exit
+    # print("entrance_position: ", entrance_position)
     if entrance_position == Vector2.ZERO:
         printerr("Could not find entrance position.")
         quit_game()
         return
-    print("exit_position: ", exit_position)
+    # print("exit_position: ", exit_position)
     if exit_position == Vector2.ZERO:
         printerr("Could not find exit position.")
         quit_game()
@@ -386,6 +387,7 @@ func unload_level() -> void:
     units_spawned = 0
     units_exited = 0
     units_dead = 0
+    global_explosion_at = 0
 
     debug_draw.update()
 
@@ -497,8 +499,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
 
             spawn_is_active = false
-            # TODO: Clean this
-            global_explosion_at = now_tick + JOB_BOMBER_DURATION + JOB_BOMBER_ANIM_DURATION + 20
+            global_explosion_at = now_tick + JOB_BOMBER_DURATION + JOB_BOMBER_ANIM_DURATION + GLOBAL_EXPLOSION_DURATION
 
             for unit_index in range(0, units_spawned):
                 var unit : Unit = units[unit_index]
@@ -535,7 +536,7 @@ func spawn_rate_down() -> void:
     
 func increase_spawn_rate(value: int) -> void:
     spawn_rate = clamp(spawn_rate + value, 10, 90) as int
-    print("spawn_rate: ", spawn_rate)
+    # print("spawn_rate: ", spawn_rate)
 
 func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> void:
     if not is_in_bounds(x, y):
@@ -862,7 +863,7 @@ func tick() -> void:
 
     if units_dead + units_exited == units_max || now_tick == global_explosion_at:
         is_ticking = false
-
+        
         if units_exited >= units_goal:
             if current_level >= config.levels.size() - 1:
                 print("Game over")
@@ -870,7 +871,6 @@ func tick() -> void:
                 yield(self, "level_unloaded")
             else:
                 print("Loading next level")
-                yield(get_tree().create_timer(1), "timeout")
                 unload_level()
                 yield(self, "level_unloaded")
                 current_level += 1
@@ -879,8 +879,9 @@ func tick() -> void:
                 is_ticking = true
                 start_level()
         else:
+            print("now_tick: ", now_tick)
+            print("global_explosion_at: ", global_explosion_at)
             print("Restarting current level")
-            yield(get_tree().create_timer(1), "timeout")
             unload_level()
             yield(self, "level_unloaded")
             load_level(config.levels[current_level])
