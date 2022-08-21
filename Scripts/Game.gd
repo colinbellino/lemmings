@@ -843,6 +843,7 @@ func tick() -> void:
         var unit : Unit = units[unit_index]
         if unit.status == Unit.STATUSES.EXITED:
             units_exited += 1
+            unit.set_text("")
         if unit.status == Unit.STATUSES.DEAD:
             remove_all_jobs(unit)
             unit.set_text("")
@@ -1019,7 +1020,6 @@ func remove_job(unit: Unit, job_id: int) -> void:
     unit.jobs_started_at[JOBS.values().find(job_id)] = 0
 
 func remove_all_jobs(unit: Unit) -> void:
-    print("regisze: ", JOBS.size())
     unit.jobs_started_at.resize(JOBS.size())
     
 func has_job(unit: Unit, job_id: int) -> bool:
