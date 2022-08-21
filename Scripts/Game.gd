@@ -50,6 +50,7 @@ const JOB_DIG_VERTICAL_DURATION : int = 300
 const JOB_DIG_VERTICAL_STEP : int = 10
 const JOB_MINE_DURATION : int = 300
 const JOB_MINE_STEP : int = 10
+const JOB_MINE_RADIUS : int = 5
 const JOB_EXPLODE_DURATION : int = 100
 const JOB_EXPLODE_ANIM_DURATION : int = 27
 const JOB_EXPLODE_STEP : int = 20
@@ -535,11 +536,10 @@ func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> v
 
     if not can_add_job(unit, job_id):
         return
-    
+
     add_job(unit, job_id)
     play_sound(config.sound_assign_job)
     jobs_count[job_id] -= 1
-
     hud.set_job_button_data(tool_id, String(jobs_count[job_id]))
 
 func set_toggle_debug_visibility(value: bool) -> void:
@@ -741,21 +741,18 @@ func tick() -> void:
                             unit.frame = job_tick % unit.frames.get_frame_count("mine")
 
                             # Dig only on the frames where the unit is digging in animation
-                            if (unit.frame == 3 || unit.frame == 19):
+                            if (unit.frame == 4):
                                 var pos_x := unit.position.x + 6 * unit.direction
-                                var pos_y := unit.position.y + 4
-                                var dig_radius := unit.height / 2
-                                paint_circle(pos_x, pos_y, dig_radius, PIXELS.EMPTY)
+                                var pos_y := unit.position.y + 2
+                                paint_circle(pos_x, pos_y, JOB_MINE_RADIUS, PIXELS.EMPTY)
 
                                 # var wall_in_front = has_flag(pos_x + dig_radius - 1, unit.position.y + dig_radius - 1, PIXELS.BLOCK)
                                 # if not wall_in_front:
                                 #     unit.jobs.erase(JOBS.MINE)
 
                             # Move only on the frames where the unit moves forward in animation
-                            if (unit.frame == 11 || unit.frame == 12 || unit.frame == 13 || unit.frame == 14 ||
-                                unit.frame == 27 || unit.frame == 28 || unit.frame == 29 || unit.frame == 30
-                            ):
-                                destination.x += 1 * unit.direction
+                            if (unit.frame == 4 || unit.frame == 15):
+                                destination.x += 2 * unit.direction
                                 destination.y += 1
 
                         continue
