@@ -5,7 +5,7 @@ enum JOBS {
     NONE = 1 << 0,
     CLIMBER = 1 << 1,
     FLOATER = 1 << 2,
-    EXPLODER = 1 << 3,
+    BOMBER = 1 << 3,
     BLOCKER = 1 << 4, 
     BUILDER = 1 << 5,
     BASHER = 1 << 6,
@@ -17,7 +17,7 @@ enum TOOLS {
     NONE = 0,
     JOB_CLIMBER = 1,
     JOB_FLOATER = 2,
-    JOB_EXPLODER = 3,
+    JOB_BOMBER = 3,
     JOB_BLOCKER = 4,
     JOB_BUILDER = 5,
     JOB_BASHER = 6,
@@ -27,7 +27,7 @@ enum TOOLS {
     PAINT_CIRCLE = 10
     ERASE_RECT = 11,
     SPAWN_UNIT = 12,
-    EXPLODE_ALL = 13,
+    BOMB_ALL = 13,
 }
 
 enum PIXELS {
@@ -42,9 +42,9 @@ signal level_loaded
 const JOB_CLIMBER_ANIM_DURATION : int = 0
 const JOB_FLOATER_ANIM_DURATION : int = 0
 const JOB_FLOATER_FLOATER_DELAY : int = 10
-const JOB_EXPLODER_DURATION : int = 100
-const JOB_EXPLODER_STEP : int = 20
-const JOB_EXPLODER_ANIM_DURATION : int = 27
+const JOB_BOMBER_DURATION : int = 100
+const JOB_BOMBER_STEP : int = 20
+const JOB_BOMBER_ANIM_DURATION : int = 27
 const JOB_BLOCKER_ANIM_DURATION : int = 0
 const JOB_BUILDER_STEP : int = 10
 const JOB_BUILDER_ANIM_DURATION : int = 0
@@ -302,7 +302,7 @@ func load_level(level: Level) -> void:
     jobs_count = {}
     jobs_count[JOBS.CLIMBER] = level.job_climber
     jobs_count[JOBS.FLOATER] = level.job_floater
-    jobs_count[JOBS.EXPLODER] = level.job_exploder
+    jobs_count[JOBS.BOMBER] = level.job_bomber
     jobs_count[JOBS.BLOCKER] = level.job_blocker
     jobs_count[JOBS.BUILDER] = level.job_builder
     jobs_count[JOBS.BASHER] = level.job_basher
@@ -467,7 +467,7 @@ func set_cursor(cursor_id: int) -> void:
 
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.JOB_CLIMBER, TOOLS.JOB_FLOATER, TOOLS.JOB_EXPLODER, TOOLS.JOB_BLOCKER, TOOLS.JOB_BASHER, TOOLS.JOB_MINER, TOOLS.JOB_DIGGER:
+        TOOLS.JOB_CLIMBER, TOOLS.JOB_FLOATER, TOOLS.JOB_BOMBER, TOOLS.JOB_BLOCKER, TOOLS.JOB_BASHER, TOOLS.JOB_MINER, TOOLS.JOB_DIGGER:
             use_job_tool(x, y, pressed, tool_id, JOBS.values()[tool_id])
             return
 
@@ -492,17 +492,17 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             var unit := spawn_unit(x, y)
             print("%s spawned" % unit.name)
 
-        TOOLS.EXPLODE_ALL:
+        TOOLS.BOMB_ALL:
             if pressed:
                 return
 
             spawn_is_active = false
             # TODO: Clean this
-            global_explosion_at = now_tick + JOB_EXPLODER_DURATION + JOB_EXPLODER_ANIM_DURATION + 20
+            global_explosion_at = now_tick + JOB_BOMBER_DURATION + JOB_BOMBER_ANIM_DURATION + 20
 
             for unit_index in range(0, units_spawned):
                 var unit : Unit = units[unit_index]
-                add_job(unit, JOBS.EXPLODER)
+                add_job(unit, JOBS.BOMBER)
 
             play_sound(config.sound_assign_job)
 
@@ -604,14 +604,14 @@ func tick() -> void:
         color.a = 0.6
         debug_draw.add_rect(Rect2(unit.position.x, unit.position.y, 1, 1), color)
 
-        if has_job(unit, JOBS.EXPLODER):
-            var job_started_at := get_job_started_at(unit, JOBS.EXPLODER)
-            if now_tick <= job_started_at + JOB_EXPLODER_DURATION:
-                if (now_tick - job_started_at) % JOB_EXPLODER_STEP == 0:
-                    var countdown : int = JOB_EXPLODER_DURATION / JOB_EXPLODER_STEP - (now_tick - job_started_at) / JOB_EXPLODER_STEP
+        if has_job(unit, JOBS.BOMBER):
+            var job_started_at := get_job_started_at(unit, JOBS.BOMBER)
+            if now_tick <= job_started_at + JOB_BOMBER_DURATION:
+                if (now_tick - job_started_at) % JOB_BOMBER_STEP == 0:
+                    var countdown : int = JOB_BOMBER_DURATION / JOB_BOMBER_STEP - (now_tick - job_started_at) / JOB_BOMBER_STEP
                     unit.set_text(String(countdown))
 
-            var timer_done : int = now_tick == job_started_at + JOB_EXPLODER_DURATION
+            var timer_done : int = now_tick == job_started_at + JOB_BOMBER_DURATION
             if timer_done:
                 unit.set_text("")
                 if is_grounded:
@@ -620,7 +620,7 @@ func tick() -> void:
                     unit.play("explode")
                 play_sound(config.sound_deathrattle)
 
-            var animation_done : int = now_tick == job_started_at + JOB_EXPLODER_DURATION + JOB_EXPLODER_ANIM_DURATION
+            var animation_done : int = now_tick == job_started_at + JOB_BOMBER_DURATION + JOB_BOMBER_ANIM_DURATION
             if animation_done:
                 unit.status = Unit.STATUSES.DEAD
                 play_sound(config.sound_explode, rand_range(1.0, 1.1))

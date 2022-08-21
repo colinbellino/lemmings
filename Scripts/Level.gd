@@ -12,7 +12,7 @@ export(int, 1, 100, 1) var units_goal : int = 10
 export(int, 10, 100, 1) var spawn_rate : int = 50
 export var job_climber : int
 export var job_floater : int
-export var job_exploder : int
+export var job_bomber : int
 export var job_blocker : int
 export var job_builder : int
 export var job_basher : int
