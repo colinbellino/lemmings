@@ -10,11 +10,11 @@ export var camera_y : int
 export(int, 1, 100, 1) var units_max : int = 10
 export(int, 1, 100, 1) var units_goal : int = 10
 export(int, 10, 100, 1) var spawn_rate : int = 50
-export var job_climb : int
-export var job_float : int
-export var job_explode : int
-export var job_stop : int
-export var job_bridge : int
-export var job_dig_horizontal : int
-export var job_mine : int
-export var job_dig_vertical : int
+export var job_climber : int
+export var job_floater : int
+export var job_exploder : int
+export var job_blocker : int
+export var job_builder : int
+export var job_basher : int
+export var job_miner : int
+export var job_digger : int
