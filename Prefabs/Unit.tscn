@@ -1,4 +1,4 @@
-[gd_scene load_steps=170 format=2]
+[gd_scene load_steps=187 format=2]
 
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=1]
 [ext_resource path="res://Scripts/Unit.gd" type="Script" id=2]
@@ -67,6 +67,74 @@ region = Rect2( 96, 160, 16, 16 )
 [sub_resource type="AtlasTexture" id=106]
 atlas = ExtResource( 3 )
 region = Rect2( 112, 160, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=188]
+atlas = ExtResource( 3 )
+region = Rect2( 0, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=189]
+atlas = ExtResource( 3 )
+region = Rect2( 16, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=190]
+atlas = ExtResource( 3 )
+region = Rect2( 32, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=191]
+atlas = ExtResource( 3 )
+region = Rect2( 48, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=192]
+atlas = ExtResource( 3 )
+region = Rect2( 64, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=193]
+atlas = ExtResource( 3 )
+region = Rect2( 80, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=194]
+atlas = ExtResource( 3 )
+region = Rect2( 96, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=195]
+atlas = ExtResource( 3 )
+region = Rect2( 112, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=196]
+atlas = ExtResource( 3 )
+region = Rect2( 128, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=197]
+atlas = ExtResource( 3 )
+region = Rect2( 144, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=198]
+atlas = ExtResource( 3 )
+region = Rect2( 160, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=199]
+atlas = ExtResource( 3 )
+region = Rect2( 176, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=200]
+atlas = ExtResource( 3 )
+region = Rect2( 192, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=201]
+atlas = ExtResource( 3 )
+region = Rect2( 208, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=202]
+atlas = ExtResource( 3 )
+region = Rect2( 224, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=203]
+atlas = ExtResource( 3 )
+region = Rect2( 240, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=204]
+atlas = ExtResource( 3 )
+region = Rect2( 0, 272, 16, 16 )
 
 [sub_resource type="AtlasTexture" id=39]
 atlas = ExtResource( 3 )
@@ -671,6 +739,11 @@ animations = [ {
 "name": "block",
 "speed": 10.0
 }, {
+"frames": [ SubResource( 188 ), SubResource( 189 ), SubResource( 190 ), SubResource( 191 ), SubResource( 192 ), SubResource( 193 ), SubResource( 194 ), SubResource( 195 ), SubResource( 196 ), SubResource( 197 ), SubResource( 198 ), SubResource( 199 ), SubResource( 200 ), SubResource( 201 ), SubResource( 202 ), SubResource( 203 ), SubResource( 204 ) ],
+"loop": true,
+"name": "build",
+"speed": 10.0
+}, {
 "frames": [ SubResource( 39 ), SubResource( 40 ), SubResource( 41 ), SubResource( 42 ), SubResource( 43 ), SubResource( 44 ), SubResource( 45 ), SubResource( 46 ) ],
 "loop": true,
 "name": "climb",
@@ -730,7 +803,8 @@ animations = [ {
 [node name="Unit" type="AnimatedSprite"]
 z_index = 1
 frames = SubResource( 10 )
-animation = "climb_end"
+animation = "build"
+frame = 15
 offset = Vector2( 0, -2 )
 script = ExtResource( 2 )
 

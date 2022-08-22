@@ -46,7 +46,9 @@ const JOB_BOMBER_DURATION : int = 100
 const JOB_BOMBER_STEP : int = 20
 const JOB_BOMBER_ANIM_DURATION : int = 27
 const JOB_BLOCKER_ANIM_DURATION : int = 0
+const JOB_BUILDER_DURATION : int = 200
 const JOB_BUILDER_STEP : int = 10
+const JOB_BUILDER_DESTROY_RADIUS : int = 5
 const JOB_BUILDER_ANIM_DURATION : int = 0
 const JOB_BASHER_DURATION : int = 750
 const JOB_BASHER_STEP : int = 10
@@ -469,7 +471,7 @@ func set_cursor(cursor_id: int) -> void:
 
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.JOB_CLIMBER, TOOLS.JOB_FLOATER, TOOLS.JOB_BOMBER, TOOLS.JOB_BLOCKER, TOOLS.JOB_BASHER, TOOLS.JOB_MINER, TOOLS.JOB_DIGGER:
+        TOOLS.JOB_CLIMBER, TOOLS.JOB_FLOATER, TOOLS.JOB_BOMBER, TOOLS.JOB_BLOCKER, TOOLS.JOB_BASHER, TOOLS.JOB_MINER, TOOLS.JOB_DIGGER, TOOLS.JOB_BUILDER:
             use_job_tool(x, y, pressed, tool_id, JOBS.values()[tool_id])
             return
 
@@ -651,6 +653,7 @@ func tick() -> void:
                 remove_job(unit, JOBS.BASHER)
                 remove_job(unit, JOBS.MINER)
                 remove_job(unit, JOBS.DIGGER)
+                remove_job(unit, JOBS.BUILDER)
 
                 if is_grounded:
                     if now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
@@ -772,6 +775,32 @@ func tick() -> void:
                             if (unit.frame == 4 || unit.frame == 15):
                                 destination.x += 2 * unit.direction
                                 destination.y += 1
+
+                        continue
+
+                    if has_job(unit, JOBS.BUILDER):
+                        var job_started_at := get_job_started_at(unit, JOBS.BUILDER)
+
+                        var job_first_tick = now_tick == job_started_at
+                        if job_first_tick:
+                            unit.play("build")
+                            unit.stop()
+                            
+                        var is_done : int = now_tick >= job_started_at + JOB_BUILDER_DURATION
+                        if not is_done:
+                            var job_tick = (now_tick - job_started_at)
+                            unit.frame = job_tick % unit.frames.get_frame_count("build")
+
+                            # Dig only on the frames where the unit is digging in animation
+                            if (unit.frame == 9):
+                                var pos_x := unit.position.x + 4 * unit.direction
+                                var pos_y := unit.position.y + unit.height / 2 - 1
+                                paint_rect(pos_x, pos_y, 4, 1, PIXELS.BLOCK | PIXELS.PAINT)
+
+                            # Move only on the frames where the unit moves forward in animation
+                            if (unit.frame == 16):
+                                destination.x += 2 * unit.direction
+                                destination.y -= 1
 
                         continue
 
