@@ -164,7 +164,14 @@ func _process(delta: float) -> void:
         load_level(config.levels[current_level])
         yield(self, "level_loaded")
         is_ticking = true
-        start_level()
+        start_level()     
+
+    if Input.is_action_just_released("debug_6"):
+        var filename := "res://Screenshots/%s.png" % OS.get_system_time_msecs()
+        var image := get_viewport().get_texture().get_data()
+        image.flip_y()
+        image.save_png(filename)
+        print("Screenshot taken: ", filename)
         
     if Input.is_action_just_released("debug_11"):
         print("Previous level")
