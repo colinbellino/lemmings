@@ -135,7 +135,7 @@ func _process(delta: float) -> void:
 
     if Input.is_action_just_released("debug_6"):
         var filename := "res://Screenshots/%s.png" % OS.get_system_time_msecs()
-        var image := get_viewport().get_texture().get_data()
+        var image := get_viewport().get_texture().get_data()#.get_rect(Rect2(0, get_viewport().size.y - 180, 320, 180))
         image.flip_y()
         image.save_png(filename)
         print("Screenshot taken: ", filename)
@@ -231,6 +231,7 @@ func _process(delta: float) -> void:
             if Input.is_action_just_released("ui_right"):
                 print("Next tick: ", now_tick)
                 tick()
+                debug_draw.update()
                 now_tick += 1
 
 func start_game() -> void:
@@ -578,7 +579,7 @@ func tick() -> void:
             continue
 
         var destination := unit.position
-        var ground_check_pos_x := int(unit.position.x)
+        var ground_check_pos_x := int(unit.position.x + 1 * unit.direction)
         var ground_check_pos_y := int(unit.position.y + unit.height / 2)
 
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
