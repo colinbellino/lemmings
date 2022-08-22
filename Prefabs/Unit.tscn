@@ -1,4 +1,4 @@
-[gd_scene load_steps=187 format=2]
+[gd_scene load_steps=189 format=2]
 
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=1]
 [ext_resource path="res://Scripts/Unit.gd" type="Script" id=2]
@@ -604,6 +604,14 @@ region = Rect2( 96, 128, 16, 16 )
 atlas = ExtResource( 3 )
 region = Rect2( 112, 128, 16, 16 )
 
+[sub_resource type="AtlasTexture" id=205]
+atlas = ExtResource( 3 )
+region = Rect2( 96, 128, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=206]
+atlas = ExtResource( 3 )
+region = Rect2( 80, 128, 16, 16 )
+
 [sub_resource type="AtlasTexture" id=155]
 atlas = ExtResource( 3 )
 region = Rect2( 0, 240, 16, 16 )
@@ -784,7 +792,7 @@ animations = [ {
 "name": "fall",
 "speed": 10.0
 }, {
-"frames": [ SubResource( 83 ), SubResource( 84 ), SubResource( 85 ), SubResource( 86 ), SubResource( 87 ), SubResource( 88 ), SubResource( 89 ), SubResource( 90 ) ],
+"frames": [ SubResource( 83 ), SubResource( 84 ), SubResource( 85 ), SubResource( 86 ), SubResource( 87 ), SubResource( 88 ), SubResource( 89 ), SubResource( 90 ), SubResource( 205 ), SubResource( 206 ) ],
 "loop": false,
 "name": "float",
 "speed": 10.0
@@ -803,8 +811,8 @@ animations = [ {
 [node name="Unit" type="AnimatedSprite"]
 z_index = 1
 frames = SubResource( 10 )
-animation = "build"
-frame = 15
+animation = "float"
+frame = 4
 offset = Vector2( 0, -2 )
 script = ExtResource( 2 )
 

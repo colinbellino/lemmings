@@ -44,7 +44,6 @@ const JOB_FLOATER_ANIM_DURATION : int = 0
 const JOB_FLOATER_FLOATER_DELAY : int = 10
 const JOB_BOMBER_DURATION : int = 100
 const JOB_BOMBER_STEP : int = 20
-const JOB_BOMBER_ANIM_DURATION : int = 27
 const JOB_BLOCKER_ANIM_DURATION : int = 0
 const JOB_BUILDER_DURATION : int = 200
 const JOB_BUILDER_STEP : int = 10
@@ -69,7 +68,7 @@ const CURSOR_BORDER : int = 1
 const FALL_DURATION_FATAL : int = 55
 const FALL_DURATION_FLOAT : int = 25
 const FALL_SPLAT_ANIM_DURATION : int = 27
-const GLOBAL_EXPLOSION_DURATION : int = 20
+const LEVEL_END_DELAY : int = 20
 
 # Scene stuff
 var map_image : Image
@@ -105,7 +104,7 @@ var tool_secondary : int = TOOLS.PAINT_RECT
 var tool_tertiary : int = TOOLS.ERASE_RECT
 var mouse_button_pressed : int
 var debug_is_visible : bool
-var global_explosion_at : int
+var trigger_end_at : int
 
 # Level data
 var units : Array = []
@@ -398,7 +397,7 @@ func unload_level() -> void:
     units_spawned = 0
     units_exited = 0
     units_dead = 0
-    global_explosion_at = 0
+    trigger_end_at = 0
 
     debug_draw.update()
 
@@ -510,14 +509,16 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
 
             spawn_is_active = false
-            global_explosion_at = now_tick + JOB_BOMBER_DURATION + JOB_BOMBER_ANIM_DURATION + GLOBAL_EXPLOSION_DURATION
+            play_sound(config.sound_assign_job)
 
+            if units_spawned == 0:
+                return
+
+            trigger_end_at = now_tick + JOB_BOMBER_DURATION + units[0].frames.get_frame_count("explode") + LEVEL_END_DELAY
+            
             for unit_index in range(0, units_spawned):
                 var unit : Unit = units[unit_index]
                 add_job(unit, JOBS.BOMBER)
-
-            play_sound(config.sound_assign_job)
-
         _:
             if pressed:
                 return
@@ -626,6 +627,9 @@ func tick() -> void:
         color.a = 0.6
         debug_draw.add_rect(Rect2(unit.position.x, unit.position.y, 1, 1), color)
 
+        var frames_count := unit.frames.get_frame_count(unit.animation)
+        var state_tick := now_tick - unit.state_entered_at
+
         if has_job(unit, JOBS.BOMBER):
             var job_started_at := get_job_started_at(unit, JOBS.BOMBER)
             if now_tick <= job_started_at + JOB_BOMBER_DURATION:
@@ -642,15 +646,18 @@ func tick() -> void:
                     unit.play("explode")
                 play_sound(config.sound_deathrattle)
 
-            var animation_done : int = now_tick == job_started_at + JOB_BOMBER_DURATION + JOB_BOMBER_ANIM_DURATION
-            if animation_done:
-                unit.status = Unit.STATUSES.DEAD
-                play_sound(config.sound_explode, rand_range(1.0, 1.1))
-                paint_circle(unit.position.x, unit.position.y, 9, PIXELS.EMPTY)
-                var dust_particle = config.dust_particle_prefab.instance()
-                dust_particle.position = unit.position
-                dust_particle.emitting = true
-                scaler_node.add_child(dust_particle)
+            var exploding := now_tick >= job_started_at + JOB_BOMBER_DURATION
+            if exploding:
+                unit.frame = state_tick % frames_count
+                var animation_done : int = unit.frame == frames_count - 1
+                if animation_done:
+                    unit.status = Unit.STATUSES.DEAD
+                    play_sound(config.sound_explode, rand_range(1.0, 1.1))
+                    paint_circle(unit.position.x, unit.position.y, 9, PIXELS.EMPTY)
+                    var dust_particle = config.dust_particle_prefab.instance()
+                    dust_particle.position = unit.position
+                    dust_particle.emitting = true
+                    scaler_node.add_child(dust_particle)
 
         match unit.state:
 
@@ -684,8 +691,20 @@ func tick() -> void:
                     unit.state = Unit.STATES.WALKING
                     unit.state_entered_at = now_tick
                 else:
-                    unit.play("float")
-                    if now_tick >= unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
+                    if now_tick == unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
+                        unit.play("float")
+                        unit.stop()
+                        unit.frame = 0
+                    elif now_tick > unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
+                        var frame := unit.frame
+                        if unit.frame + 1 > 9:
+                            frame = 4
+                        else:
+                            frame += 1
+
+                        if frame <= 4 || now_tick % 4 == 0:
+                            unit.frame = frame
+
                         destination.y += 0.3
                     else:
                         destination.y += 1
@@ -697,20 +716,19 @@ func tick() -> void:
 
                 if hit_ceiling:
                     unit.direction *= -1
-                    unit.state = Unit.STATES.FALLING
+                    unit.state = Unit.STATES.fALLING
                     unit.state_entered_at = now_tick
                 elif hit_top_wall:
                     unit.state = Unit.STATES.CLIMBING_END
                     unit.state_entered_at = now_tick
                 else:
                     unit.play("climb")
+                    unit.frame = state_tick % frames_count
                     destination.y -= 1
                     
             Unit.STATES.CLIMBING_END:
                 unit.play("climb_end")
-                var state_tick := now_tick - unit.state_entered_at
-                var frames_count := unit.frames.get_frame_count("climb_end")
-                unit.frame = state_tick % unit.frames.get_frame_count("climb_end")
+                unit.frame = state_tick % frames_count
 
                 var done := unit.frame == frames_count - 1
                 if done:
@@ -722,10 +740,8 @@ func tick() -> void:
             Unit.STATES.WALKING:
                 if is_grounded:
                     if has_job(unit, JOBS.CLIMBER):
-
                         var pos_x := unit.position.x + 4 * unit.direction
-
-                        var wall_in_front = has_flag(pos_x, unit.position.y, PIXELS.BLOCK)
+                        var wall_in_front := has_flag(pos_x, unit.position.y, PIXELS.BLOCK)
                         if wall_in_front:
                             unit.state = Unit.STATES.CLIMBING
                             unit.state_entered_at = now_tick
@@ -733,15 +749,15 @@ func tick() -> void:
                     if has_job(unit, JOBS.BASHER):
                         var job_started_at := get_job_started_at(unit, JOBS.BASHER)
                         
-                        var job_first_tick = now_tick == job_started_at
+                        var job_first_tick := now_tick == job_started_at
                         if job_first_tick:
                             unit.play("dig_horizontal")
                             unit.stop()
 
                         var is_done : int = now_tick >= job_started_at + JOB_BASHER_DURATION
                         if not is_done:
-                            var job_tick = now_tick - job_started_at
-                            unit.frame = job_tick % unit.frames.get_frame_count("dig_horizontal")
+                            var job_tick := now_tick - job_started_at
+                            unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 3 || unit.frame == 19):
@@ -771,8 +787,8 @@ func tick() -> void:
                             
                         var is_done : int = now_tick >= job_started_at + JOB_MINER_DURATION
                         if not is_done:
-                            var job_tick = (now_tick - job_started_at)
-                            unit.frame = job_tick % unit.frames.get_frame_count("mine")
+                            var job_tick := now_tick - job_started_at
+                            unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 4):
@@ -797,8 +813,8 @@ func tick() -> void:
                             
                         var is_done : int = now_tick >= job_started_at + JOB_BUILDER_DURATION
                         if not is_done:
-                            var job_tick = (now_tick - job_started_at)
-                            unit.frame = job_tick % unit.frames.get_frame_count("build")
+                            var job_tick := now_tick - job_started_at
+                            unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 9):
@@ -817,11 +833,14 @@ func tick() -> void:
                         var job_started_at := get_job_started_at(unit, JOBS.DIGGER)
 
                         unit.play("dig_vertical")
+                        var job_tick := now_tick - job_started_at
+                        unit.frame = job_tick % frames_count
+
                         if (now_tick - job_started_at) % JOB_DIGGER_STEP == 0:
                             var rect := Rect2(unit.position.x, unit.position.y + 3, unit.width, 6)
                             debug_draw.add_rect(rect, Color.red)
                             paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.EMPTY)
-    
+
                             var is_not_done : int = now_tick < job_started_at + JOB_DIGGER_DURATION
                             if is_not_done:
                                 destination.y += 1
@@ -836,6 +855,9 @@ func tick() -> void:
                         if now_tick == job_started_at:
                             unit.play("block")
                             paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.BLOCK)
+                        else:
+                            var job_tick := now_tick - job_started_at
+                            unit.frame = job_tick % frames_count
 
                         continue
 
@@ -869,6 +891,7 @@ func tick() -> void:
                         destination.x += unit.direction
 
                         unit.play("walk")
+                        unit.frame = state_tick % frames_count
                 else:
                     unit.state = Unit.STATES.FALLING
                     unit.state_entered_at = now_tick
@@ -899,7 +922,10 @@ func tick() -> void:
             unit.visible = false
             units_dead += 1
 
-    if units_dead + units_exited == units_max || now_tick == global_explosion_at:
+    if trigger_end_at == 0 && units_dead + units_exited == units_max:
+        trigger_end_at = now_tick + 50
+
+    if now_tick == trigger_end_at:
         is_ticking = false
         
         if units_exited >= units_goal:
@@ -917,8 +943,6 @@ func tick() -> void:
                 is_ticking = true
                 start_level()
         else:
-            print("now_tick: ", now_tick)
-            print("global_explosion_at: ", global_explosion_at)
             print("Restarting current level")
             unload_level()
             yield(self, "level_unloaded")

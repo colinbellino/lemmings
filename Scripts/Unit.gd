@@ -10,6 +10,7 @@ enum STATES {
     FLOATING,
     CLIMBING,
     CLIMBING_END
+    EXPLODING,
     DEAD_FALL,
 }
 
