@@ -15,7 +15,11 @@ mono_crash.*.json
 .DS_Store
 
 # Builds
-Builds/
+Builds/*
+!Builds/.gdignore
 
 # VSCode
 .vscode/settings.json
+
+Screenshots/*
+!Screenshots/.gdignore
