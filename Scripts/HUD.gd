@@ -1,8 +1,6 @@
 class_name HUD
 extends CanvasLayer
 
-var TOOLS = load("res://Scripts/Game.gd").TOOLS
-
 onready var root : Control = get_node("Root")
 onready var job_buttons : Array = [
     get_node("%JobButton1"),
@@ -47,7 +45,7 @@ func close() -> void:
     emit_signal("closed")
 
 func job_button_pressed(index: int) -> void:
-    var job_id : int = TOOLS.values()[index + 1]
+    var job_id : int = Enums.TOOLS.values()[index + 1]
     emit_signal("tool_selected", job_id)
 
 func set_job_button_data(job_id: int, text: String) -> void: 
@@ -57,7 +55,7 @@ func select_job(tool_id: int) -> void:
     job_buttons[tool_id - 1].grab_focus()
 
 func explode_button_pressed() -> void:
-    emit_signal("tool_selected", TOOLS.BOMB_ALL)
+    emit_signal("tool_selected", Enums.TOOLS.BOMB_ALL)
 
 func spawn_rate_up_button_pressed() -> void:
     emit_signal("spawn_rate_up_pressed")

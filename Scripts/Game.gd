@@ -1,41 +1,6 @@
 class_name Game
 extends Node2D
 
-enum JOBS {
-    NONE = 1 << 0,
-    CLIMBER = 1 << 1,
-    FLOATER = 1 << 2,
-    BOMBER = 1 << 3,
-    BLOCKER = 1 << 4, 
-    BUILDER = 1 << 5,
-    BASHER = 1 << 6,
-    MINER = 1 << 7,
-    DIGGER = 1 << 8,
-}
-
-enum TOOLS {
-    NONE = 0,
-    JOB_CLIMBER = 1,
-    JOB_FLOATER = 2,
-    JOB_BOMBER = 3,
-    JOB_BLOCKER = 4,
-    JOB_BUILDER = 5,
-    JOB_BASHER = 6,
-    JOB_MINER = 7,
-    JOB_DIGGER = 8,
-    PAINT_RECT = 9,
-    PAINT_CIRCLE = 10
-    ERASE_RECT = 11,
-    SPAWN_UNIT = 12,
-    BOMB_ALL = 13,
-}
-
-enum PIXELS {
-    EMPTY = 1 << 0
-    BLOCK = 1 << 1
-    PAINT = 1 << 2
-}
-
 signal level_unloaded
 signal level_loaded
 
@@ -73,15 +38,15 @@ const LEVEL_END_DELAY : int = 20
 # Scene stuff
 var map_image : Image
 var collision_image : Image
-var entrance_node : Node
-var exit_node : Node
-onready var config : Resource = ResourceLoader.load("res://default_game_config.tres")
+var entrance_node : AnimatedSprite
+var exit_node : AnimatedSprite
+onready var config : GameConfig
 onready var camera : Camera2D = get_node("%Camera")
 onready var scaler_node : Node2D = get_node("%Scaler")
 onready var map_sprite : Sprite = get_node("%Map")
 onready var collision_sprite : Sprite = get_node("%Collision")
 onready var debug_label : Label = get_node("%DebugLabel")
-onready var debug_draw : Control = get_node("%DebugCanvas")
+onready var debug_draw : DebugDraw = get_node("%DebugCanvas")
 onready var title : Title = get_node("%Title")
 onready var hud : HUD = get_node("%HUD")
 onready var transitions : Transitions = get_node("%Transitions")
@@ -99,9 +64,9 @@ var now_tick : int
 var is_ticking : bool
 var game_scale : int
 var next_tick_at : float
-var tool_primary : int = TOOLS.JOB_DIGGER
-var tool_secondary : int = TOOLS.PAINT_RECT
-var tool_tertiary : int = TOOLS.ERASE_RECT
+var tool_primary : int = Enums.TOOLS.JOB_DIGGER
+var tool_secondary : int = Enums.TOOLS.PAINT_RECT
+var tool_tertiary : int = Enums.TOOLS.ERASE_RECT
 var mouse_button_pressed : int
 var debug_is_visible : bool
 var trigger_end_at : int
@@ -116,8 +81,8 @@ var units_goal : int
 var map_data : PoolIntArray = []
 var map_width : int
 var map_height : int
-var map_texture : Texture
-var collision_texture : Texture
+var map_texture : ImageTexture
+var collision_texture : ImageTexture
 var entrance_position : Vector2
 var exit_position : Vector2
 var spawn_is_active : bool
@@ -128,6 +93,8 @@ func _ready() -> void:
     now = OS.get_ticks_msec()
     game_scale = GAME_SCALE
     scaler_node.scale = Vector2(game_scale, game_scale)
+
+    config = ResourceLoader.load("res://default_game_config.tres")
 
     set_toggle_debug_visibility(false)
     if OS.is_debug_build():
@@ -148,7 +115,7 @@ func _process(delta: float) -> void:
         print("Toggling debug mode")
         set_toggle_debug_visibility(!debug_is_visible)
         debug_draw.update()
-        
+
     if Input.is_action_just_released("debug_2"):
         print("Toggling map")
         map_sprite.visible = !map_sprite.visible
@@ -156,7 +123,7 @@ func _process(delta: float) -> void:
     if Input.is_action_just_released("debug_4"):
         print("Toggling audio mute")
         AudioServer.set_bus_mute(audio_bus_master, !AudioServer.is_bus_mute(audio_bus_master))
-        
+
     if Input.is_action_just_released("debug_5"):
         print("Restarting level")
         unload_level()
@@ -205,7 +172,7 @@ func _process(delta: float) -> void:
         print("Toggling pause")
 
     if Input.is_action_just_released("ui_accept"):
-        game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
+        game_scale = int(max(1, (game_scale + 1) % (GAME_SCALE + 1)))
         scaler_node.scale = Vector2(game_scale, game_scale)
         debug_draw.update()
 
@@ -224,21 +191,21 @@ func _process(delta: float) -> void:
         else:
             Engine.time_scale = TIME_SCALE
 
-        var mouse_map_position = get_mouse_position()
+        var mouse_map_position := get_mouse_position()
 
         # Update cursor
-        var unit_index := get_unit_at(mouse_map_position.x, mouse_map_position.y)
+        var unit_index := get_unit_at(int(mouse_map_position.x), int(mouse_map_position.y))
         if unit_index > -1:
             set_cursor(CURSOR_BORDER)
         else:
             set_cursor(CURSOR_DEFAULT)
 
         if Input.is_mouse_button_pressed(BUTTON_LEFT):
-            use_tool(tool_primary, mouse_map_position.x, mouse_map_position.y, true)
+            use_tool(tool_primary, int(mouse_map_position.x), int(mouse_map_position.y), true)
         elif Input.is_mouse_button_pressed(BUTTON_RIGHT):
-            use_tool(tool_secondary, mouse_map_position.x, mouse_map_position.y, true)
+            use_tool(tool_secondary, int(mouse_map_position.x), int(mouse_map_position.y), true)
         elif Input.is_mouse_button_pressed(BUTTON_MIDDLE):
-            use_tool(tool_tertiary, mouse_map_position.x, mouse_map_position.y, true)
+            use_tool(tool_tertiary, int(mouse_map_position.x), int(mouse_map_position.y), true)
 
         debug_label.set_text(JSON.print({ 
             "FPS": Performance.get_monitor(Performance.TIME_FPS),
@@ -276,9 +243,9 @@ func start_game() -> void:
     set_cursor(CURSOR_DEFAULT)
 
     # Init UI
-    action0_button.connect("pressed", self, "select_tool", [TOOLS.PAINT_RECT])
-    action1_button.connect("pressed", self, "select_tool", [TOOLS.ERASE_RECT])
-    action2_button.connect("pressed", self, "select_tool", [TOOLS.SPAWN_UNIT])
+    action0_button.connect("pressed", self, "select_tool", [Enums.TOOLS.PAINT_RECT])
+    action1_button.connect("pressed", self, "select_tool", [Enums.TOOLS.ERASE_RECT])
+    action2_button.connect("pressed", self, "select_tool", [Enums.TOOLS.SPAWN_UNIT])
     hud.connect("tool_selected", self, "select_tool")
     hud.connect("spawn_rate_up_pressed", self, "spawn_rate_up")
     hud.connect("spawn_rate_down_pressed", self, "spawn_rate_down")
@@ -299,13 +266,13 @@ func _unhandled_input(event) -> void:
         pass
 
     if event is InputEventMouseButton:
-        var map_position = get_mouse_position()
+        var map_position := get_mouse_position()
         if event.button_index == BUTTON_LEFT:
-            use_tool(tool_primary, map_position.x, map_position.y, event.pressed)
+            use_tool(tool_primary, int(map_position.x), int(map_position.y), event.pressed)
         if event.button_index == BUTTON_RIGHT:
-            use_tool(tool_secondary, map_position.x, map_position.y, event.pressed)
+            use_tool(tool_secondary, int(map_position.x), int(map_position.y), event.pressed)
         if event.button_index == BUTTON_MIDDLE:
-            use_tool(tool_tertiary, map_position.x, map_position.y, event.pressed)
+            use_tool(tool_tertiary, int(map_position.x), int(map_position.y), event.pressed)
 
 func load_level(level: Level) -> void:
     # Initialize level data
@@ -315,14 +282,14 @@ func load_level(level: Level) -> void:
     spawn_rate = level.spawn_rate
     increase_spawn_rate(0) # Just to make sure it's clamped to a valid value
     jobs_count = {}
-    jobs_count[JOBS.CLIMBER] = level.job_climber
-    jobs_count[JOBS.FLOATER] = level.job_floater
-    jobs_count[JOBS.BOMBER] = level.job_bomber
-    jobs_count[JOBS.BLOCKER] = level.job_blocker
-    jobs_count[JOBS.BUILDER] = level.job_builder
-    jobs_count[JOBS.BASHER] = level.job_basher
-    jobs_count[JOBS.MINER] = level.job_miner
-    jobs_count[JOBS.DIGGER] = level.job_digger
+    jobs_count[Enums.JOBS.CLIMBER] = level.job_climber
+    jobs_count[Enums.JOBS.FLOATER] = level.job_floater
+    jobs_count[Enums.JOBS.BOMBER] = level.job_bomber
+    jobs_count[Enums.JOBS.BLOCKER] = level.job_blocker
+    jobs_count[Enums.JOBS.BUILDER] = level.job_builder
+    jobs_count[Enums.JOBS.BASHER] = level.job_basher
+    jobs_count[Enums.JOBS.MINER] = level.job_miner
+    jobs_count[Enums.JOBS.DIGGER] = level.job_digger
 
     var keys := jobs_count.keys()
     var first_selected := false
@@ -348,15 +315,15 @@ func load_level(level: Level) -> void:
         for x in range(0, map_width):
             var index := calculate_index(x, y, map_width) 
             var color := map_image.get_pixel(x, y)
-            var value : int = PIXELS.EMPTY
+            var value : int = Enums.PIXELS.EMPTY
             if color.a > 0:
-                value = PIXELS.BLOCK
+                value = Enums.PIXELS.BLOCK
             if color.is_equal_approx(config.exit_color):
                 exit_position = Vector2(x, y)
-                value = PIXELS.EMPTY
+                value = Enums.PIXELS.EMPTY
             if color.is_equal_approx(config.entrance_color):
                 entrance_position = Vector2(x, y)
-                value = PIXELS.EMPTY
+                value = Enums.PIXELS.EMPTY
             map_data.set(index, value)
     map_image.unlock()
 
@@ -454,7 +421,7 @@ func get_unit_at(x: int, y: int) -> int:
         return -1
 
     for unit_index in range(0, units_spawned):
-        var unit = units[unit_index]
+        var unit : Unit = units[unit_index]
         if is_inside_rect(Vector2(x, y), unit.get_bounds_centered()):
             return unit_index
 
@@ -484,32 +451,32 @@ func set_cursor(cursor_id: int) -> void:
 
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
     match tool_id:
-        TOOLS.JOB_CLIMBER, TOOLS.JOB_FLOATER, TOOLS.JOB_BOMBER, TOOLS.JOB_BLOCKER, TOOLS.JOB_BASHER, TOOLS.JOB_MINER, TOOLS.JOB_DIGGER, TOOLS.JOB_BUILDER:
-            use_job_tool(x, y, pressed, tool_id, JOBS.values()[tool_id])
+        Enums.TOOLS.JOB_CLIMBER, Enums.TOOLS.JOB_FLOATER, Enums.TOOLS.JOB_BOMBER, Enums.TOOLS.JOB_BLOCKER, Enums.TOOLS.JOB_BASHER, Enums.TOOLS.JOB_MINER, Enums.TOOLS.JOB_DIGGER, Enums.TOOLS.JOB_BUILDER:
+            use_job_tool(x, y, pressed, tool_id, Enums.JOBS.values()[tool_id])
             return
 
-        TOOLS.PAINT_RECT:
-            var size = 20
-            paint_rect(x, y, size, size, PIXELS.BLOCK | PIXELS.PAINT)
+        Enums.TOOLS.PAINT_RECT:
+            var size := 20
+            paint_rect(x, y, size, size, Enums.PIXELS.BLOCK | Enums.PIXELS.PAINT)
 
-        TOOLS.PAINT_CIRCLE:
-            var size = 10
-            paint_circle(x, y, size, PIXELS.BLOCK | PIXELS.PAINT)
+        Enums.TOOLS.PAINT_CIRCLE:
+            var size := 10
+            paint_circle(x, y, size, Enums.PIXELS.BLOCK | Enums.PIXELS.PAINT)
 
-        TOOLS.ERASE_RECT:
-            var size = 20
-            paint_rect(x, y, size, size, PIXELS.EMPTY)
+        Enums.TOOLS.ERASE_RECT:
+            var size := 20
+            paint_rect(x, y, size, size, Enums.PIXELS.EMPTY)
 
-        TOOLS.SPAWN_UNIT:
+        Enums.TOOLS.SPAWN_UNIT:
             if pressed:
                 return
-            if has_flag(x, y, PIXELS.BLOCK):
+            if has_flag(x, y, Enums.PIXELS.BLOCK):
                 return
                 
             var unit := spawn_unit(x, y)
             print("%s spawned" % unit.name)
 
-        TOOLS.BOMB_ALL:
+        Enums.TOOLS.BOMB_ALL:
             if pressed:
                 return
 
@@ -523,24 +490,24 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             
             for unit_index in range(0, units_spawned):
                 var unit : Unit = units[unit_index]
-                add_job(unit, JOBS.BOMBER)
+                add_job(unit, Enums.JOBS.BOMBER)
         _:
             if pressed:
                 return
 
-            print("Tool not implemented: ", TOOLS.keys()[tool_id])
+            print("Tool not implemented: ", Enums.TOOLS.keys()[tool_id])
             return
 
-    print("Used tool: %s at (%s,%s)" % [TOOLS.keys()[tool_id], x, y])
+    print("Used tool: %s at (%s,%s)" % [Enums.TOOLS.keys()[tool_id], x, y])
 
 func select_tool(tool_id: int) -> void:
-    print("Tool selected: ", TOOLS.keys()[tool_id])
-    if tool_id < JOBS.size():
+    print("Tool selected: ", Enums.TOOLS.keys()[tool_id])
+    if tool_id < Enums.JOBS.size():
         tool_primary = tool_id
         hud.select_job(tool_id)
         return
 
-    if tool_id == TOOLS.SPAWN_UNIT:
+    if tool_id == Enums.TOOLS.SPAWN_UNIT:
         tool_primary = tool_id
 
     use_tool(tool_id, 0, 0, false)
@@ -552,7 +519,7 @@ func spawn_rate_down() -> void:
     increase_spawn_rate(-10)
     
 func increase_spawn_rate(value: int) -> void:
-    spawn_rate = clamp(spawn_rate + value, 10, 90) as int
+    spawn_rate = int(clamp(spawn_rate + value, 10, 90))
     # print("spawn_rate: ", spawn_rate)
 
 func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> void:
@@ -590,7 +557,7 @@ func set_toggle_debug_visibility(value: bool) -> void:
 func tick() -> void: 
     if spawn_is_active:
         if now_tick % (100 - spawn_rate) == 0:
-            spawn_unit(entrance_position.x, entrance_position.y)
+            spawn_unit(int(entrance_position.x), int(entrance_position.y))
             if units_spawned >= units.size():
                 spawn_is_active = false
 
@@ -599,10 +566,10 @@ func tick() -> void:
 
         if OS.is_debug_build():
             var jobs_str := ""
-            for job_index in range(0, JOBS.size()):
-                var job_id : int = JOBS.values()[job_index]
+            for job_index in range(0, Enums.JOBS.size()):
+                var job_id : int = Enums.JOBS.values()[job_index]
                 if has_job(unit, job_id):
-                    jobs_str += "%s " % JOBS.keys()[job_index]
+                    jobs_str += "%s " % Enums.JOBS.keys()[job_index]
 
             debug_draw.add_text(unit.position + Vector2(-5, -10), Unit.STATES.keys()[unit.state])
             debug_draw.add_text(unit.position + Vector2(-5, -7), jobs_str)
@@ -611,8 +578,8 @@ func tick() -> void:
             continue
 
         var destination := unit.position
-        var ground_check_pos_x : int = unit.position.x
-        var ground_check_pos_y : int = unit.position.y + unit.height / 2
+        var ground_check_pos_x := int(unit.position.x)
+        var ground_check_pos_y := int(unit.position.y + unit.height / 2)
 
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             # print("%s: OOB" % unit.name)
@@ -625,18 +592,18 @@ func tick() -> void:
             play_sound(config.sound_yippee, rand_range(0.9, 1.2))
             continue
 
-        var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, PIXELS.BLOCK)
+        var is_grounded := has_flag(ground_check_pos_x, ground_check_pos_y, Enums.PIXELS.BLOCK)
         debug_draw.add_rect(Rect2(ground_check_pos_x, ground_check_pos_y, 1, 1), Color.yellow)
 
-        var color = Color.red
+        var color := Color.red
         color.a = 0.6
         debug_draw.add_rect(Rect2(unit.position.x, unit.position.y, 1, 1), color)
 
         var frames_count := unit.frames.get_frame_count(unit.animation)
         var state_tick := now_tick - unit.state_entered_at
 
-        if has_job(unit, JOBS.BOMBER):
-            var job_started_at := get_job_started_at(unit, JOBS.BOMBER)
+        if has_job(unit, Enums.JOBS.BOMBER):
+            var job_started_at := get_job_started_at(unit, Enums.JOBS.BOMBER)
             if now_tick <= job_started_at + JOB_BOMBER_DURATION:
                 if (now_tick - job_started_at) % JOB_BOMBER_STEP == 0:
                     var countdown : int = JOB_BOMBER_DURATION / JOB_BOMBER_STEP - (now_tick - job_started_at) / JOB_BOMBER_STEP
@@ -658,7 +625,7 @@ func tick() -> void:
                 if animation_done:
                     unit.status = Unit.STATUSES.DEAD
                     play_sound(config.sound_explode, rand_range(1.0, 1.1))
-                    paint_circle(unit.position.x, unit.position.y, 9, PIXELS.EMPTY)
+                    paint_circle(int(unit.position.x), int(unit.position.y), 9, Enums.PIXELS.EMPTY)
                     var dust_particle = config.dust_particle_prefab.instance()
                     dust_particle.position = unit.position
                     dust_particle.emitting = true
@@ -670,11 +637,11 @@ func tick() -> void:
                 pass
 
             Unit.STATES.FALLING:
-                remove_job(unit, JOBS.BLOCKER)
-                remove_job(unit, JOBS.BASHER)
-                remove_job(unit, JOBS.MINER)
-                remove_job(unit, JOBS.DIGGER)
-                remove_job(unit, JOBS.BUILDER)
+                remove_job(unit, Enums.JOBS.BLOCKER)
+                remove_job(unit, Enums.JOBS.BASHER)
+                remove_job(unit, Enums.JOBS.MINER)
+                remove_job(unit, Enums.JOBS.DIGGER)
+                remove_job(unit, Enums.JOBS.BUILDER)
 
                 if is_grounded:
                     if now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
@@ -684,7 +651,7 @@ func tick() -> void:
                         unit.state = Unit.STATES.WALKING
                         unit.state_entered_at = now_tick
                 else:
-                    if has_job(unit, JOBS.FLOATER) && now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
+                    if has_job(unit, Enums.JOBS.FLOATER) && now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
                         unit.state = Unit.STATES.FLOATING
                         unit.state_entered_at = now_tick
                     else:
@@ -716,9 +683,9 @@ func tick() -> void:
                         destination.y += 1
 
             Unit.STATES.CLIMBING:
-                var wall_pos_x := unit.position.x + 4 * unit.direction
-                var hit_top_wall := has_flag(wall_pos_x, unit.position.y - 1, PIXELS.EMPTY)
-                var hit_ceiling := has_flag(unit.position.x, unit.position.y - unit.height / 2, PIXELS.BLOCK)
+                var wall_pos_x := int(unit.position.x + 4 * unit.direction)
+                var hit_top_wall := has_flag(wall_pos_x, int(unit.position.y - 1), Enums.PIXELS.EMPTY)
+                var hit_ceiling := has_flag(int(unit.position.x), int(unit.position.y - unit.height / 2), Enums.PIXELS.BLOCK)
 
                 if hit_ceiling:
                     unit.direction *= -1
@@ -745,15 +712,15 @@ func tick() -> void:
 
             Unit.STATES.WALKING:
                 if is_grounded:
-                    if has_job(unit, JOBS.CLIMBER):
-                        var pos_x := unit.position.x + 4 * unit.direction
-                        var wall_in_front := has_flag(pos_x, unit.position.y, PIXELS.BLOCK)
+                    if has_job(unit, Enums.JOBS.CLIMBER):
+                        var pos_x := int(unit.position.x + 4 * unit.direction)
+                        var wall_in_front := has_flag(pos_x, int(unit.position.y), Enums.PIXELS.BLOCK)
                         if wall_in_front:
                             unit.state = Unit.STATES.CLIMBING
                             unit.state_entered_at = now_tick
 
-                    if has_job(unit, JOBS.BASHER):
-                        var job_started_at := get_job_started_at(unit, JOBS.BASHER)
+                    if has_job(unit, Enums.JOBS.BASHER):
+                        var job_started_at := get_job_started_at(unit, Enums.JOBS.BASHER)
                         
                         var job_first_tick := now_tick == job_started_at
                         if job_first_tick:
@@ -767,13 +734,13 @@ func tick() -> void:
 
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 3 || unit.frame == 19):
-                                var pos_x := unit.position.x + 4 * unit.direction
-                                var dig_radius := unit.height / 2
-                                paint_circle(pos_x, unit.position.y, dig_radius, PIXELS.EMPTY)
+                                var pos_x := int(unit.position.x + 4 * unit.direction)
+                                var dig_radius := int(unit.height / 2)
+                                paint_circle(pos_x, int(unit.position.y), dig_radius, Enums.PIXELS.EMPTY)
 
-                                var wall_in_front = has_flag(pos_x + dig_radius - 1, unit.position.y + dig_radius - 1, PIXELS.BLOCK)
+                                var wall_in_front = has_flag(pos_x + dig_radius - 1, int(unit.position.y) + dig_radius - 1, Enums.PIXELS.BLOCK)
                                 if not wall_in_front:
-                                    remove_job(unit, JOBS.BASHER)
+                                    remove_job(unit, Enums.JOBS.BASHER)
 
                             # Move only on the frames where the unit moves forward in animation
                             if (unit.frame == 11 || unit.frame == 12 || unit.frame == 13 || unit.frame == 14 ||
@@ -783,8 +750,8 @@ func tick() -> void:
 
                         continue
 
-                    if has_job(unit, JOBS.MINER):
-                        var job_started_at := get_job_started_at(unit, JOBS.MINER)
+                    if has_job(unit, Enums.JOBS.MINER):
+                        var job_started_at := get_job_started_at(unit, Enums.JOBS.MINER)
 
                         var job_first_tick = now_tick == job_started_at
                         if job_first_tick:
@@ -798,9 +765,9 @@ func tick() -> void:
 
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 4):
-                                var pos_x := unit.position.x + 6 * unit.direction
-                                var pos_y := unit.position.y + 2
-                                paint_circle(pos_x, pos_y, JOB_MINER_DESTROY_RADIUS, PIXELS.EMPTY)
+                                var pos_x := int(unit.position.x + 6 * unit.direction)
+                                var pos_y := int(unit.position.y + 2)
+                                paint_circle(pos_x, pos_y, JOB_MINER_DESTROY_RADIUS, Enums.PIXELS.EMPTY)
 
                             # Move only on the frames where the unit moves forward in animation
                             if (unit.frame == 4 || unit.frame == 15):
@@ -809,10 +776,10 @@ func tick() -> void:
 
                         continue
 
-                    if has_job(unit, JOBS.BUILDER):
-                        var job_started_at := get_job_started_at(unit, JOBS.BUILDER)
+                    if has_job(unit, Enums.JOBS.BUILDER):
+                        var job_started_at := get_job_started_at(unit, Enums.JOBS.BUILDER)
 
-                        var job_first_tick = now_tick == job_started_at
+                        var job_first_tick := now_tick == job_started_at
                         if job_first_tick:
                             unit.play("build")
                             unit.stop()
@@ -824,9 +791,9 @@ func tick() -> void:
 
                             # Dig only on the frames where the unit is digging in animation
                             if (unit.frame == 9):
-                                var pos_x := unit.position.x + 4 * unit.direction
-                                var pos_y := unit.position.y + unit.height / 2 - 1
-                                paint_rect(pos_x, pos_y, 4, 1, PIXELS.BLOCK | PIXELS.PAINT)
+                                var pos_x := int(unit.position.x + 4 * unit.direction)
+                                var pos_y := int(unit.position.y + unit.height / 2 - 1)
+                                paint_rect(pos_x, pos_y, 4, 1, Enums.PIXELS.BLOCK | Enums.PIXELS.PAINT)
 
                             # Move only on the frames where the unit moves forward in animation
                             if (unit.frame == 16):
@@ -835,8 +802,8 @@ func tick() -> void:
 
                         continue
 
-                    if has_job(unit, JOBS.DIGGER):
-                        var job_started_at := get_job_started_at(unit, JOBS.DIGGER)
+                    if has_job(unit, Enums.JOBS.DIGGER):
+                        var job_started_at := get_job_started_at(unit, Enums.JOBS.DIGGER)
 
                         unit.play("dig_vertical")
                         var job_tick := now_tick - job_started_at
@@ -845,7 +812,7 @@ func tick() -> void:
                         if (now_tick - job_started_at) % JOB_DIGGER_STEP == 0:
                             var rect := Rect2(unit.position.x, unit.position.y + 3, unit.width, 6)
                             debug_draw.add_rect(rect, Color.red)
-                            paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.EMPTY)
+                            paint_rect(int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y), Enums.PIXELS.EMPTY)
 
                             var is_not_done : int = now_tick < job_started_at + JOB_DIGGER_DURATION
                             if is_not_done:
@@ -853,29 +820,29 @@ func tick() -> void:
 
                         continue
 
-                    if has_job(unit, JOBS.BLOCKER):
-                        var job_started_at := get_job_started_at(unit, JOBS.BLOCKER)
+                    if has_job(unit, Enums.JOBS.BLOCKER):
+                        var job_started_at := get_job_started_at(unit, Enums.JOBS.BLOCKER)
 
-                        var rect = Rect2(unit.position.x, unit.position.y, unit.width, unit.height)
+                        var rect := Rect2(unit.position.x, unit.position.y, unit.width, unit.height)
                         debug_draw.add_rect(rect, Color.red)
                         if now_tick == job_started_at:
                             unit.play("block")
-                            paint_rect(rect.position.x, rect.position.y, rect.size.x, rect.size.y, PIXELS.BLOCK)
+                            paint_rect(int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y), Enums.PIXELS.BLOCK)
                         else:
                             var job_tick := now_tick - job_started_at
                             unit.frame = job_tick % frames_count
 
                         continue
 
-                    var wall_check_pos_x : int = unit.position.x + unit.direction
-                    var wall_check_pos_y : int = unit.position.y + (unit.height / 2) - 1
+                    var wall_check_pos_x := int(unit.position.x + unit.direction)
+                    var wall_check_pos_y := int(unit.position.y + (unit.height / 2) - 1)
                     var destination_offset_y := 0
                     var hit_wall := false
                     
                     for offset_y in range(0, -unit.climb_step, -1):
                         var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
                         debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
-                        hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, PIXELS.BLOCK)
+                        hit_wall = has_flag(wall_check_pos_x, wall_check_pos_y_with_offset, Enums.PIXELS.BLOCK)
 
                         if not hit_wall:
                             destination_offset_y = offset_y
@@ -888,7 +855,7 @@ func tick() -> void:
                         for offset_y in range(1, unit.climb_step):
                             var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
                             debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
-                            if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, PIXELS.BLOCK):
+                            if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, Enums.PIXELS.BLOCK):
                                 break
                             destination_offset_y = offset_y
 
@@ -1006,8 +973,8 @@ func paint_circle(origin_x: int, origin_y: int, radius: int, value: int) -> void
 
     for r in range(0, radius):
         for angle in range(0, 360):
-            var pos_x : int = round(origin_x + r * cos(angle * PI / 180))
-            var pos_y : int = round(origin_y + r * sin(angle * PI / 180))
+            var pos_x := int(round(origin_x + r * cos(angle * PI / 180)))
+            var pos_y := int(round(origin_y + r * sin(angle * PI / 180)))
             if is_in_bounds(pos_x, pos_y):
                 var index := calculate_index(pos_x, pos_y, map_width)
                 pixels_to_draw.append(index)
@@ -1036,9 +1003,9 @@ func quit_game() -> void:
 # TODO: Don't do collision update if not in debug mode
 func update_map(x: int, y: int, width: int, height: int) -> void:
     # print("update_map: ", [x, y, width, height])
-    var start := OS.get_ticks_usec()
+    # var start := OS.get_ticks_usec()
 
-    var count := 0
+    # var count := 0
 
     collision_image.lock()
     map_image.lock()
@@ -1052,16 +1019,16 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
             var pos_y := index / map_width
             
             var collision_color := Color.transparent
-            if pixel != PIXELS.EMPTY:
+            if pixel != Enums.PIXELS.EMPTY:
                 collision_color = Color.red
             collision_image.set_pixel(pos_x, pos_y, collision_color)
 
-            if pixel == PIXELS.EMPTY:
+            if pixel == Enums.PIXELS.EMPTY:
                 map_image.set_pixel(pos_x, pos_y, Color.transparent)
-            elif has_flag(pos_x, pos_y, PIXELS.PAINT):
+            elif has_flag(pos_x, pos_y, Enums.PIXELS.PAINT):
                 map_image.set_pixel(pos_x, pos_y, Color.blue)
 
-            count += 1
+            # count += 1
     collision_image.unlock()
     map_image.unlock()
 
@@ -1071,8 +1038,8 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     map_texture.create_from_image(map_image, 0)
     map_sprite.texture = map_texture
     
-    var end := OS.get_ticks_usec()
-    var time := (end - start) / 1000.0
+    # var end := OS.get_ticks_usec()
+    # var time := (end - start) / 1000.0
 
     # print("collision_update: %s pixels in %sms" % [count, time])
 
@@ -1091,33 +1058,33 @@ func play_sound(sound: AudioStream, pitch: float = 1.0) -> void:
     audio_player_sound.play()
 
 func add_job(unit: Unit, job_id: int) -> void:
-    unit.jobs_started_at[JOBS.values().find(job_id)] = now_tick
+    unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = now_tick
 
 func remove_job(unit: Unit, job_id: int) -> void:
-    unit.jobs_started_at[JOBS.values().find(job_id)] = 0
+    unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = 0
 
 func remove_all_jobs(unit: Unit) -> void:
-    unit.jobs_started_at.resize(JOBS.size())
+    unit.jobs_started_at.resize(Enums.JOBS.size())
     
 func has_job(unit: Unit, job_id: int) -> bool:
-    return unit.jobs_started_at[JOBS.values().find(job_id)] > 0
+    return unit.jobs_started_at[Enums.JOBS.values().find(job_id)] > 0
 
 func get_job_started_at(unit: Unit, job_id: int) -> int:
-    return unit.jobs_started_at[JOBS.values().find(job_id)]
+    return unit.jobs_started_at[Enums.JOBS.values().find(job_id)]
 
 func can_add_job(unit: Unit, job_id: int) -> bool:
     match job_id:
-        JOBS.BLOCKER, JOBS.BUILDER, JOBS.DIGGER:
-            var is_grounded = has_flag(unit.position.x, unit.position.y + unit.height / 2, PIXELS.BLOCK)
+        Enums.JOBS.BLOCKER, Enums.JOBS.BUILDER, Enums.JOBS.DIGGER:
+            var is_grounded = has_flag(int(unit.position.x), int(unit.position.y + unit.height / 2), Enums.PIXELS.BLOCK)
             return unit.state == Unit.STATES.WALKING && is_grounded
 
-        JOBS.BASHER:
-            var wall_in_front = has_flag(unit.position.x + 6 * unit.direction, unit.position.y, PIXELS.BLOCK)
+        Enums.JOBS.BASHER:
+            var wall_in_front = has_flag(int(unit.position.x + 6 * unit.direction), int(unit.position.y), Enums.PIXELS.BLOCK)
             return unit.state == Unit.STATES.WALKING && wall_in_front
 
-        JOBS.MINER:
-            var wall_in_front = has_flag(unit.position.x + 6 * unit.direction, unit.position.y, PIXELS.BLOCK)
-            var is_grounded = has_flag(unit.position.x, unit.position.y + unit.height / 2, PIXELS.BLOCK)
+        Enums.JOBS.MINER:
+            var wall_in_front = has_flag(int(unit.position.x + 6 * unit.direction), int(unit.position.y), Enums.PIXELS.BLOCK)
+            var is_grounded = has_flag(int(unit.position.x), int(unit.position.y + unit.height / 2), Enums.PIXELS.BLOCK)
             return unit.state == Unit.STATES.WALKING && (wall_in_front || is_grounded)
 
         _: 

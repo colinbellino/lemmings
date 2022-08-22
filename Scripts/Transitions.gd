@@ -13,7 +13,7 @@ onready var rects : Array = [
     get_node("%Rect5"),
 ]
 
-func open(duration: float = 0.75, color: Color = Color.black) -> void:
+func open(duration: float = 0.75) -> void:
     var tween := create_tween()
 
     for rect_index in range(0, rects.size()):

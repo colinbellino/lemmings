@@ -1,7 +1,7 @@
 class_name DebugDraw
 extends Control
 
-var _game : Game
+var _game
 var _font : Font
 var _updated : bool
 var _rects : Array = []
