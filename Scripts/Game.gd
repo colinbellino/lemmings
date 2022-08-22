@@ -41,7 +41,7 @@ signal level_loaded
 
 const JOB_CLIMBER_ANIM_DURATION : int = 0
 const JOB_FLOATER_ANIM_DURATION : int = 0
-const JOB_FLOATER_FLOATER_DELAY : int = 10
+const JOB_FLOATER_FLOATER_DELAY : int = 7
 const JOB_BOMBER_DURATION : int = 100
 const JOB_BOMBER_STEP : int = 20
 const JOB_BLOCKER_ANIM_DURATION : int = 0
@@ -251,15 +251,20 @@ func _process(delta: float) -> void:
 
         if now >= next_tick_at:
             tick()
+            now_tick += 1
             next_tick_at = now + TICK_SPEED
 
     else:
         if OS.is_debug_build():
             if Input.is_action_just_released("ui_left"):
+                # now_tick -= 1
+                # tick()
+                # print("Previous tick: ", now_tick)
                 pass
             if Input.is_action_just_released("ui_right"):
-                print("tick (manual)")
+                print("Next tick: ", now_tick)
                 tick()
+                now_tick += 1
 
 func start_game() -> void:
     title.close()
@@ -705,7 +710,8 @@ func tick() -> void:
                         if frame <= 4 || now_tick % 4 == 0:
                             unit.frame = frame
 
-                        destination.y += 0.3
+                        if now_tick % 3 == 0:
+                            destination.y += 1
                     else:
                         destination.y += 1
 
@@ -906,8 +912,6 @@ func tick() -> void:
                     
         unit.flip_h = unit.direction == -1
         unit.position = destination
-
-    now_tick += 1
 
     units_exited = 0
     units_dead = 0
