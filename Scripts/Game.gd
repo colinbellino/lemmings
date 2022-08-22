@@ -148,6 +148,7 @@ func _process(delta: float) -> void:
     if Input.is_action_just_released("debug_1"):
         print("Toggling debug mode")
         set_toggle_debug_visibility(!debug_is_visible)
+        debug_draw.update()
         
     if Input.is_action_just_released("debug_2"):
         print("Toggling map")
@@ -204,6 +205,11 @@ func _process(delta: float) -> void:
             Engine.time_scale = 0
         print("Toggling pause")
 
+    if Input.is_action_just_released("ui_accept"):
+        game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
+        scaler_node.scale = Vector2(game_scale, game_scale)
+        debug_draw.update()
+
     if is_ticking:
         if Input.is_action_just_released("ui_down"):
             increase_spawn_rate(-10)
@@ -213,10 +219,6 @@ func _process(delta: float) -> void:
             camera.position.x = clamp(camera.position.x - 10, 0, map_width - camera.get_viewport().size.x / game_scale)
         if Input.is_action_just_released("ui_right"):
             camera.position.x = clamp(camera.position.x + 10, 0, map_width - camera.get_viewport().size.x / game_scale)
-
-        if Input.is_action_just_released("ui_accept"):
-            game_scale = max(1, (game_scale + 1) % (GAME_SCALE + 1))
-            scaler_node.scale = Vector2(game_scale, game_scale)
 
         if Input.is_key_pressed(KEY_SHIFT):
             Engine.time_scale = TIME_SCALE * 20
