@@ -1,12 +1,10 @@
 {
-    // See https://go.microsoft.com/fwlink/?LinkId=733558
-    // for the documentation about the tasks.json format
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build: windows (debug)",
+            "label": "Windows: build (debug)",
             "type": "shell",
-            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Windows/$date_time; godot --no-window --export-debug \"Windows Desktop\" ./Builds/Windows/$date_time/Lemmings.exe && ./Builds/Windows/$date_time/Lemmings.exe",
+            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Windows/$date_time; godot --no-window --export-debug 'Windows Desktop' ./Builds/Windows/$date_time/Lemmings.exe && ./Builds/Windows/$date_time/Lemmings.exe",
             "problemMatcher": [],
             "group": {
                 "kind": "build",
@@ -14,16 +12,45 @@
             }
         },
         {
-            "label": "Build: windows (release)",
+            "label": "Windows: build (release)",
             "type": "shell",
-            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Windows/$date_time; godot --no-window --export \"Windows Desktop\" ./Builds/Windows/$date_time/Lemmings.exe && ./Builds/Windows/$date_time/Lemmings.exe",
+            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Windows/$date_time; godot --no-window --export 'Windows Desktop' ./Builds/Windows/$date_time/Lemmings.exe && ./Builds/Windows/$date_time/Lemmings.exe",
             "problemMatcher": []
         },
         {
-            "label": "Build + Deploy: windows (release)",
+            "label": "Windows: deploy",
             "type": "shell",
-            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Windows/$date_time; godot --no-window --export \"Windows Desktop\" ./Builds/Windows/$date_time/Lemmings.exe && ./Builds/Windows/$date_time/Lemmings.exe && butler push ./Builds/Windows/$date_time/ colinbellino/lemmings:windows",
+            "command": "butler push ./Builds/Windows/${input:folder} colinbellino/lemmings:win",
             "problemMatcher": []
+        },
+        {
+            "label": "Mac: build (debug)",
+            "type": "shell",
+            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Mac/$date_time; godot --no-window --export-debug 'Mac OSX' ./Builds/Mac/$date_time/Lemmings.app && open ./Builds/Mac/$date_time/Lemmings.app",
+            "problemMatcher": [],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        },
+        {
+            "label": "Mac: build (release)",
+            "type": "shell",
+            "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Mac/$date_time; godot --no-window --export 'Mac OSX' ./Builds/Mac/$date_time/Lemmings.app && open ./Builds/Mac/$date_time/Lemmings.app",
+            "problemMatcher": []
+        },
+        {
+            "label": "Mac: deploy",
+            "type": "shell",
+            "command": "butler push ./Builds/Mac/${input:folder} colinbellino/lemmings:mac",
+            "problemMatcher": []
+        },
+    ],
+    "inputs": [
+        {
+            "id": "folder",
+            "type": "promptString",
+            "description": "Folder to deploy"
         }
     ]
 }
