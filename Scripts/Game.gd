@@ -786,7 +786,9 @@ func tick() -> void:
                             unit.stop()
                             
                         var is_done : int = now_tick >= job_started_at + JOB_BUILDER_DURATION
-                        if not is_done:
+                        if is_done:
+                            remove_job(unit, Enums.JOBS.BUILDER)
+                        else:
                             var job_tick := now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
