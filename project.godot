@@ -77,7 +77,6 @@ _global_script_class_icons={
 config/name="Lemmings"
 run/main_scene="res://Scenes/Main.tscn"
 boot_splash/show_image=false
-boot_splash/image="res://splash.png"
 boot_splash/fullsize=false
 boot_splash/use_filter=false
 boot_splash/bg_color=Color( 0, 0, 0, 1 )
