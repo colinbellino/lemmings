@@ -866,12 +866,18 @@ func tick() -> void:
                                 break
                             destination_offset_y = offset_y
 
-                        # Walk forward
-                        destination.y += destination_offset_y
-                        destination.x += unit.direction
+                        var is_over_hole := has_flag(wall_check_pos_x, wall_check_pos_y + destination_offset_y + 1, Enums.PIXELS.EMPTY)
+                        if is_over_hole:
+                            destination.x += unit.direction * 2
+                            unit.state = Unit.STATES.FALLING
+                            unit.state_entered_at = now_tick
+                        else:
+                            # Walk forward
+                            unit.play("walk")
+                            unit.frame = state_tick % frames_count
+                            destination.y += destination_offset_y
+                            destination.x += unit.direction
 
-                        unit.play("walk")
-                        unit.frame = state_tick % frames_count
                 else:
                     unit.state = Unit.STATES.FALLING
                     unit.state_entered_at = now_tick
