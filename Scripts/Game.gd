@@ -14,7 +14,7 @@ const JOB_BUILDER_DURATION : int = 200
 const JOB_BUILDER_STEP : int = 10
 const JOB_BUILDER_DESTROY_RADIUS : int = 5
 const JOB_BUILDER_ANIM_DURATION : int = 0
-const JOB_BASHER_DURATION : int = 750
+const JOB_BASHER_DURATION : int = 300
 const JOB_BASHER_STEP : int = 10
 const JOB_BASHER_ANIM_DURATION : int = 0
 const JOB_MINER_DURATION : int = 300
@@ -729,7 +729,9 @@ func tick() -> void:
                             unit.stop()
 
                         var is_done : int = now_tick >= job_started_at + JOB_BASHER_DURATION
-                        if not is_done:
+                        if is_done:
+                            remove_job(unit, Enums.JOBS.BASHER)
+                        else:
                             var job_tick := now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
@@ -760,7 +762,9 @@ func tick() -> void:
                             unit.stop()
                             
                         var is_done : int = now_tick >= job_started_at + JOB_MINER_DURATION
-                        if not is_done:
+                        if is_done:
+                            remove_job(unit, Enums.JOBS.MINER)
+                        else:
                             var job_tick := now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
