@@ -1,0 +1,27 @@
+[gd_resource type="Resource" load_steps=6 format=2]
+
+[ext_resource path="res://Scripts/Level.gd" type="Script" id=1]
+[ext_resource path="res://Prefabs/Entrance_00.tscn" type="PackedScene" id=2]
+[ext_resource path="res://Prefabs/Exit_00.tscn" type="PackedScene" id=3]
+[ext_resource path="res://Art/Levels/map_06.png" type="Texture" id=4]
+[ext_resource path="res://Audio/Musics/11 Builders Will Help You Here.mp3" type="AudioStream" id=5]
+
+[resource]
+script = ExtResource( 1 )
+texture = ExtResource( 4 )
+music = ExtResource( 5 )
+entrance = ExtResource( 2 )
+exit = ExtResource( 3 )
+camera_x = 180
+camera_y = 0
+units_max = 50
+units_goal = 25
+spawn_rate = 50
+job_climber = 0
+job_floater = 0
+job_bomber = 0
+job_blocker = 0
+job_builder = 20
+job_basher = 0
+job_miner = 0
+job_digger = 0
