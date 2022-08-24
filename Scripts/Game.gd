@@ -35,11 +35,32 @@ const FALL_DURATION_FLOAT : int = 25
 const FALL_SPLAT_ANIM_DURATION : int = 27
 const LEVEL_END_DELAY : int = 20
 
+class TickData:
+    var now : float
+    var now_tick : int
+    var is_ticking : bool
+    var next_tick_at : float
+    var trigger_end_at : int
+    var map_data : PoolIntArray
+    var units : Array
+    var units_spawned : int
+    var units_exited : int
+    var units_dead : int
+
+class LevelData:
+    var units_max : int
+    var units_goal : int
+    var map_width : int
+    var map_height : int
+    var map_texture : ImageTexture
+    var collision_texture : ImageTexture
+    var entrance_position : Vector2
+    var exit_position : Vector2
+    var spawn_is_active : bool
+    var spawn_rate : int
+    var jobs_count : Dictionary
+
 # Scene stuff
-var map_image : Image
-var collision_image : Image
-var entrance_node : AnimatedSprite
-var exit_node : AnimatedSprite
 onready var config : GameConfig
 onready var camera : Camera2D = get_node("%Camera")
 onready var scaler_node : Node2D = get_node("%Scaler")
@@ -56,41 +77,25 @@ onready var action2_button : Button = get_node("%Action2")
 onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
 onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
+var map_image : Image
+var collision_image : Image
+var entrance_node : AnimatedSprite
+var exit_node : AnimatedSprite
 
 # Game data
 var current_level : int
-var now : float
-var now_tick : int
-var is_ticking : bool
-var game_scale : int
-var next_tick_at : float
 var tool_primary : int = Enums.TOOLS.JOB_DIGGER
 var tool_secondary : int = Enums.TOOLS.PAINT_RECT
 var tool_tertiary : int = Enums.TOOLS.ERASE_RECT
 var mouse_button_pressed : int
 var debug_is_visible : bool
-var trigger_end_at : int
-
-# Level data
-var units : Array = []
-var units_spawned : int
-var units_exited : int
-var units_dead : int
-var units_max : int
-var units_goal : int
-var map_data : PoolIntArray = []
-var map_width : int
-var map_height : int
-var map_texture : ImageTexture
-var collision_texture : ImageTexture
-var entrance_position : Vector2
-var exit_position : Vector2
-var spawn_is_active : bool
-var spawn_rate : int
-var jobs_count : Dictionary
+var game_scale : int
+var tick_data : TickData
+var level_data : LevelData
 
 func _ready() -> void:
-    now = OS.get_ticks_msec()
+    tick_data = TickData.new()
+    tick_data.now = OS.get_ticks_msec()
     game_scale = GAME_SCALE
     scaler_node.scale = Vector2(game_scale, game_scale)
 
@@ -107,9 +112,9 @@ func _ready() -> void:
     match action:
         0: start_game()
         1: quit_game()
- 
+
 func _process(delta: float) -> void:
-    now += delta * 1000 # Delta is in seconds, now in Milliseconds
+    tick_data.now += delta * 1000 # Delta is in seconds, now in Milliseconds
 
     if Input.is_action_just_released("debug_1"):
         print("Toggling debug mode")
@@ -130,8 +135,8 @@ func _process(delta: float) -> void:
         yield(self, "level_unloaded")
         load_level(config.levels[current_level])
         yield(self, "level_loaded")
-        is_ticking = true
-        start_level()     
+        tick_data.is_ticking = true
+        start_level()
 
     if Input.is_action_just_released("debug_6"):
         var filename := "res://Screenshots/%s.png" % OS.get_system_time_msecs()
@@ -139,7 +144,7 @@ func _process(delta: float) -> void:
         image.flip_y()
         image.save_png(filename)
         print("Screenshot taken: ", filename)
-        
+
     if Input.is_action_just_released("debug_11"):
         print("Previous level")
         unload_level()
@@ -147,7 +152,7 @@ func _process(delta: float) -> void:
         current_level -= 1
         load_level(config.levels[current_level])
         yield(self, "level_loaded")
-        is_ticking = true
+        tick_data.is_ticking = true
         start_level()
 
     if Input.is_action_just_released("debug_12"):
@@ -157,15 +162,15 @@ func _process(delta: float) -> void:
         current_level += 1
         load_level(config.levels[current_level])
         yield(self, "level_loaded")
-        is_ticking = true
+        tick_data.is_ticking = true
         start_level()
 
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
 
     if Input.is_action_just_released("ui_select"):
-        is_ticking = !is_ticking
-        if is_ticking:
+        tick_data.is_ticking = !tick_data.is_ticking
+        if tick_data.is_ticking:
             Engine.time_scale = TIME_SCALE
         else:
             Engine.time_scale = 0
@@ -176,15 +181,15 @@ func _process(delta: float) -> void:
         scaler_node.scale = Vector2(game_scale, game_scale)
         debug_draw.update()
 
-    if is_ticking:
+    if tick_data.is_ticking:
         if Input.is_action_just_released("ui_down"):
             increase_spawn_rate(-10)
         if Input.is_action_just_released("ui_up"):
             increase_spawn_rate(10)
         if Input.is_action_just_released("ui_left"):
-            camera.position.x = clamp(camera.position.x - 10, 0, map_width - camera.get_viewport().size.x / game_scale)
+            camera.position.x = clamp(camera.position.x - 10, 0, level_data.map_width - camera.get_viewport().size.x / game_scale)
         if Input.is_action_just_released("ui_right"):
-            camera.position.x = clamp(camera.position.x + 10, 0, map_width - camera.get_viewport().size.x / game_scale)
+            camera.position.x = clamp(camera.position.x + 10, 0, level_data.map_width - camera.get_viewport().size.x / game_scale)
 
         if Input.is_key_pressed(KEY_SHIFT):
             Engine.time_scale = TIME_SCALE * 20
@@ -207,37 +212,37 @@ func _process(delta: float) -> void:
         elif Input.is_mouse_button_pressed(BUTTON_MIDDLE):
             use_tool(tool_tertiary, int(mouse_map_position.x), int(mouse_map_position.y), true)
 
-        debug_label.set_text(JSON.print({ 
+        debug_label.set_text(JSON.print({
             "FPS": Performance.get_monitor(Performance.TIME_FPS),
             "Scale": game_scale,
-            "Units": "%s / %s" % [units_spawned, units.size()],
-            "Spawn rate": spawn_rate,
-            "Goal": "%s / %s" % [units_exited, units_goal],
-            "Jobs": jobs_count,
+            "Units": "%s / %s" % [tick_data.units_spawned, tick_data.units.size()],
+            "Spawn rate": level_data.spawn_rate,
+            "Goal": "%s / %s" % [tick_data.units_exited, level_data.units_goal],
+            "Jobs": level_data.jobs_count,
         }, "  "))
 
-        if now >= next_tick_at:
+        if tick_data.now >= tick_data.next_tick_at:
             tick()
-            now_tick += 1
-            next_tick_at = now + TICK_SPEED
+            tick_data.now_tick += 1
+            tick_data.next_tick_at = tick_data.now + TICK_SPEED
 
     else:
         if OS.is_debug_build():
             if Input.is_action_just_released("ui_left"):
-                # now_tick -= 1
+                # tick_data.now_tick -= 1
                 # tick()
-                # print("Previous tick: ", now_tick)
+                # print("Previous tick: ", tick_data.now_tick)
                 pass
             if Input.is_action_just_released("ui_right"):
-                print("Next tick: ", now_tick)
+                print("Next tick: ", tick_data.now_tick)
                 tick()
                 debug_draw.update()
-                now_tick += 1
+                tick_data.now_tick += 1
 
 func start_game() -> void:
     title.close()
     yield(title, "closed")
-    
+
     transitions.open(0.0)
     yield(transitions, "opened")
 
@@ -256,7 +261,7 @@ func start_game() -> void:
     # Load and start the level
     load_level(config.levels[current_level])
     yield(self, "level_loaded")
-    is_ticking = true
+    tick_data.is_ticking = true
     start_level()
 
 func get_mouse_position() -> Vector2 :
@@ -278,82 +283,87 @@ func _unhandled_input(event) -> void:
 func load_level(level: Level) -> void:
     # Initialize level data
     map_image = level.texture.get_data()
-    units_max = level.units_max
-    units_goal = level.units_goal
-    spawn_rate = level.spawn_rate
+    level_data = LevelData.new()
+    level_data.units_max = level.units_max
+    level_data.units_goal = level.units_goal
+    level_data.spawn_rate = level.spawn_rate
     increase_spawn_rate(0) # Just to make sure it's clamped to a valid value
-    jobs_count = {}
-    jobs_count[Enums.JOBS.CLIMBER] = level.job_climber
-    jobs_count[Enums.JOBS.FLOATER] = level.job_floater
-    jobs_count[Enums.JOBS.BOMBER] = level.job_bomber
-    jobs_count[Enums.JOBS.BLOCKER] = level.job_blocker
-    jobs_count[Enums.JOBS.BUILDER] = level.job_builder
-    jobs_count[Enums.JOBS.BASHER] = level.job_basher
-    jobs_count[Enums.JOBS.MINER] = level.job_miner
-    jobs_count[Enums.JOBS.DIGGER] = level.job_digger
+    level_data.jobs_count = {}
+    level_data.jobs_count[Enums.JOBS.CLIMBER] = level.job_climber
+    level_data.jobs_count[Enums.JOBS.FLOATER] = level.job_floater
+    level_data.jobs_count[Enums.JOBS.BOMBER] = level.job_bomber
+    level_data.jobs_count[Enums.JOBS.BLOCKER] = level.job_blocker
+    level_data.jobs_count[Enums.JOBS.BUILDER] = level.job_builder
+    level_data.jobs_count[Enums.JOBS.BASHER] = level.job_basher
+    level_data.jobs_count[Enums.JOBS.MINER] = level.job_miner
+    level_data.jobs_count[Enums.JOBS.DIGGER] = level.job_digger
 
-    var keys := jobs_count.keys()
+    var keys := level_data.jobs_count.keys()
     var first_selected := false
     for job_index in range(0, keys.size()):
         var job_id : int = keys[job_index]
-        var count : int = jobs_count[job_id]
+        var count : int = level_data.jobs_count[job_id]
         if count > 0 && first_selected == false:
             select_tool(job_index + 1)
             first_selected = true
 
-    units.resize(units_max)
+    var units := []
+    units.resize(level_data.units_max)
+    tick_data.units = units
 
-    map_width = map_image.get_width()
-    map_height = map_image.get_height()
+    level_data.map_width = map_image.get_width()
+    level_data.map_height = map_image.get_height()
 
-    entrance_position = Vector2.ZERO
-    exit_position = Vector2.ZERO
+    level_data.entrance_position = Vector2.ZERO
+    level_data.exit_position = Vector2.ZERO
 
     # Extract the map data from the image
-    map_data.resize(map_width * map_height)
+    var map_data : PoolIntArray = []
+    map_data.resize(level_data.map_width * level_data.map_height)
     map_image.lock()
-    for y in range(0, map_height):
-        for x in range(0, map_width):
-            var index := calculate_index(x, y, map_width) 
+    for y in range(0, level_data.map_height):
+        for x in range(0, level_data.map_width):
+            var index := calculate_index(x, y, level_data.map_width)
             var color := map_image.get_pixel(x, y)
             var value : int = Enums.PIXELS.EMPTY
             if color.a > 0:
                 value = Enums.PIXELS.BLOCK
             if color.is_equal_approx(config.exit_color):
-                exit_position = Vector2(x, y)
+                level_data.exit_position = Vector2(x, y)
                 value = Enums.PIXELS.EMPTY
             if color.is_equal_approx(config.entrance_color):
-                entrance_position = Vector2(x, y)
+                level_data.entrance_position = Vector2(x, y)
                 value = Enums.PIXELS.EMPTY
             map_data.set(index, value)
     map_image.unlock()
+    tick_data.map_data = map_data
 
     # Prepare the images
-    map_texture = ImageTexture.new()
-    map_texture.create_from_image(map_image, 0)
-    map_sprite.texture = map_texture
-    collision_texture = ImageTexture.new()
-    collision_image.create(map_width, map_height, false, map_image.get_format())
+    level_data.map_texture = ImageTexture.new()
+    level_data.map_texture.create_from_image(map_image, 0)
+    map_sprite.texture = level_data.map_texture
+    level_data.collision_texture = ImageTexture.new()
+    collision_image.create(level_data.map_width, level_data.map_height, false, map_image.get_format())
 
     # Spawn the entrance and exit
-    # print("entrance_position: ", entrance_position)
-    if entrance_position == Vector2.ZERO:
+    # print("level_data.entrance_position: ", level_data.entrance_position)
+    if level_data.entrance_position == Vector2.ZERO:
         printerr("Could not find entrance position.")
         quit_game()
         return
-    # print("exit_position: ", exit_position)
-    if exit_position == Vector2.ZERO:
+    # print("level_data.exit_position: ", level_data.exit_position)
+    if level_data.exit_position == Vector2.ZERO:
         printerr("Could not find exit position.")
         quit_game()
         return
     entrance_node = level.entrance.instance()
-    entrance_node.position = entrance_position
+    entrance_node.position = level_data.entrance_position
     map_sprite.add_child(entrance_node)
     exit_node = level.exit.instance()
-    exit_node.position = exit_position
+    exit_node.position = level_data.exit_position
     map_sprite.add_child(exit_node)
 
-    update_map(0, 0, map_width, map_height)
+    update_map(0, 0, level_data.map_width, level_data.map_height)
 
     yield(get_tree(), "idle_frame")
     # yield(get_tree().create_timer(1), "timeout")
@@ -364,13 +374,13 @@ func unload_level() -> void:
     transitions.open()
     yield(transitions, "opened")
 
-    for unit_index in units_spawned:
-        var unit : Unit = units[unit_index]
+    for unit_index in tick_data.units_spawned:
+        var unit : Unit = tick_data.units[unit_index]
         unit.queue_free()
-    units_spawned = 0
-    units_exited = 0
-    units_dead = 0
-    trigger_end_at = 0
+    tick_data.units_spawned = 0
+    tick_data.units_exited = 0
+    tick_data.units_dead = 0
+    tick_data.trigger_end_at = 0
 
     debug_draw.update()
 
@@ -385,20 +395,20 @@ func unload_level() -> void:
 
 func start_level() -> void:
     print_stray_nodes()
-    
+
     var level : Level = config.levels[current_level]
 
     camera.position.x = level.camera_x
     camera.position.y = level.camera_y
-    spawn_is_active = false
+    level_data.spawn_is_active = false
 
     hud.open()
-    var keys := jobs_count.keys()
+    var keys := level_data.jobs_count.keys()
     for job_index in range(0, keys.size()):
         var job_id : int = keys[job_index]
-        var count : int = jobs_count[job_id]
+        var count : int = level_data.jobs_count[job_id]
         hud.set_job_button_data(job_index + 1, String(count))
-    
+
     yield(hud, "opened")
 
     transitions.close()
@@ -408,7 +418,7 @@ func start_level() -> void:
 
     entrance_node.play("opening")
     yield(entrance_node, "animation_finished")
-    spawn_is_active = true
+    level_data.spawn_is_active = true
 
     play_sound(config.sound_start)
 
@@ -421,8 +431,8 @@ func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
         return -1
 
-    for unit_index in range(0, units_spawned):
-        var unit : Unit = units[unit_index]
+    for unit_index in range(0, tick_data.units_spawned):
+        var unit : Unit = tick_data.units[unit_index]
         if is_inside_rect(Vector2(x, y), unit.get_bounds_centered()):
             return unit_index
 
@@ -450,7 +460,7 @@ func set_cursor(cursor_id: int) -> void:
 
     Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
 
-func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void: 
+func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
     match tool_id:
         Enums.TOOLS.JOB_CLIMBER, Enums.TOOLS.JOB_FLOATER, Enums.TOOLS.JOB_BOMBER, Enums.TOOLS.JOB_BLOCKER, Enums.TOOLS.JOB_BASHER, Enums.TOOLS.JOB_MINER, Enums.TOOLS.JOB_DIGGER, Enums.TOOLS.JOB_BUILDER:
             use_job_tool(x, y, pressed, tool_id, Enums.JOBS.values()[tool_id])
@@ -473,7 +483,7 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
                 return
             if has_flag(x, y, Enums.PIXELS.BLOCK):
                 return
-                
+
             var unit := spawn_unit(x, y)
             print("%s spawned" % unit.name)
 
@@ -481,16 +491,16 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             if pressed:
                 return
 
-            spawn_is_active = false
+            level_data.spawn_is_active = false
             play_sound(config.sound_assign_job)
 
-            if units_spawned == 0:
+            if tick_data.units_spawned == 0:
                 return
 
-            trigger_end_at = now_tick + JOB_BOMBER_DURATION + units[0].frames.get_frame_count("explode") + LEVEL_END_DELAY
-            
-            for unit_index in range(0, units_spawned):
-                var unit : Unit = units[unit_index]
+            tick_data.trigger_end_at = tick_data.now_tick + JOB_BOMBER_DURATION + tick_data.units[0].frames.get_frame_count("explode") + LEVEL_END_DELAY
+
+            for unit_index in range(0, tick_data.units_spawned):
+                var unit : Unit = tick_data.units[unit_index]
                 add_job(unit, Enums.JOBS.BOMBER)
         _:
             if pressed:
@@ -515,13 +525,13 @@ func select_tool(tool_id: int) -> void:
 
 func spawn_rate_up() -> void:
     increase_spawn_rate(10)
-    
+
 func spawn_rate_down() -> void:
     increase_spawn_rate(-10)
-    
+
 func increase_spawn_rate(value: int) -> void:
-    spawn_rate = int(clamp(spawn_rate + value, 10, 90))
-    # print("spawn_rate: ", spawn_rate)
+    level_data.spawn_rate = int(clamp(level_data.spawn_rate + value, 10, 90))
+    # print("spawn_rate: ", level_data.spawn_rate)
 
 func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> void:
     if not is_in_bounds(x, y):
@@ -530,14 +540,14 @@ func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> v
     if pressed:
         return
 
-    if jobs_count[job_id] < 1:
+    if level_data.jobs_count[job_id] < 1:
         return
 
     var unit_index := get_unit_at(x, y)
     if unit_index == -1:
         return
 
-    var unit : Unit = units[unit_index]
+    var unit : Unit = tick_data.units[unit_index]
     if has_job(unit, job_id):
         return
 
@@ -546,8 +556,8 @@ func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> v
 
     add_job(unit, job_id)
     play_sound(config.sound_assign_job)
-    jobs_count[job_id] -= 1
-    hud.set_job_button_data(tool_id, String(jobs_count[job_id]))
+    level_data.jobs_count[job_id] -= 1
+    hud.set_job_button_data(tool_id, String(level_data.jobs_count[job_id]))
 
 func set_toggle_debug_visibility(value: bool) -> void:
     collision_sprite.visible = value
@@ -555,15 +565,15 @@ func set_toggle_debug_visibility(value: bool) -> void:
     debug_label.visible = value
     debug_is_visible = value
 
-func tick() -> void: 
-    if spawn_is_active:
-        if now_tick % (100 - spawn_rate) == 0:
-            spawn_unit(int(entrance_position.x), int(entrance_position.y))
-            if units_spawned >= units.size():
-                spawn_is_active = false
+func tick() -> void:
+    if level_data.spawn_is_active:
+        if tick_data.now_tick % (100 - level_data.spawn_rate) == 0:
+            spawn_unit(int(level_data.entrance_position.x), int(level_data.entrance_position.y))
+            if tick_data.units_spawned >= tick_data.units.size():
+                level_data.spawn_is_active = false
 
-    for unit_index in range(0, units_spawned):
-        var unit : Unit = units[unit_index]
+    for unit_index in range(0, tick_data.units_spawned):
+        var unit : Unit = tick_data.units[unit_index]
 
         if OS.is_debug_build():
             var jobs_str := ""
@@ -585,9 +595,9 @@ func tick() -> void:
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             # print("%s: OOB" % unit.name)
             unit.state = Unit.STATES.DEAD_FALL
-            unit.state_entered_at = now_tick
+            unit.state_entered_at = tick_data.now_tick
 
-        if is_inside_rect(exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
+        if is_inside_rect(level_data.exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
             unit.status = Unit.STATUSES.EXITED
             play_sound(config.sound_yippee, rand_range(0.9, 1.2))
@@ -601,25 +611,25 @@ func tick() -> void:
         debug_draw.add_rect(Rect2(unit.position.x, unit.position.y, 1, 1), color)
 
         var frames_count := unit.frames.get_frame_count(unit.animation)
-        var state_tick := now_tick - unit.state_entered_at
+        var state_tick := tick_data.now_tick - unit.state_entered_at
 
         if has_job(unit, Enums.JOBS.BOMBER):
             var job_started_at := get_job_started_at(unit, Enums.JOBS.BOMBER)
-            if now_tick <= job_started_at + JOB_BOMBER_DURATION:
-                if (now_tick - job_started_at) % JOB_BOMBER_STEP == 0:
-                    var countdown : int = JOB_BOMBER_DURATION / JOB_BOMBER_STEP - (now_tick - job_started_at) / JOB_BOMBER_STEP
+            if tick_data.now_tick <= job_started_at + JOB_BOMBER_DURATION:
+                if (tick_data.now_tick - job_started_at) % JOB_BOMBER_STEP == 0:
+                    var countdown : int = JOB_BOMBER_DURATION / JOB_BOMBER_STEP - (tick_data.now_tick - job_started_at) / JOB_BOMBER_STEP
                     unit.set_text(String(countdown))
 
-            var timer_done : int = now_tick == job_started_at + JOB_BOMBER_DURATION
+            var timer_done : int = tick_data.now_tick == job_started_at + JOB_BOMBER_DURATION
             if timer_done:
                 unit.set_text("")
                 if is_grounded:
                     unit.state = Unit.STATES.IDLE
-                    unit.state_entered_at = now_tick
+                    unit.state_entered_at = tick_data.now_tick
                     unit.play("explode")
                 play_sound(config.sound_deathrattle)
 
-            var exploding := now_tick >= job_started_at + JOB_BOMBER_DURATION
+            var exploding := tick_data.now_tick >= job_started_at + JOB_BOMBER_DURATION
             if exploding:
                 unit.frame = state_tick % frames_count
                 var animation_done : int = unit.frame == frames_count - 1
@@ -645,16 +655,16 @@ func tick() -> void:
                 remove_job(unit, Enums.JOBS.BUILDER)
 
                 if is_grounded:
-                    if now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
+                    if tick_data.now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
                         unit.state = Unit.STATES.DEAD_FALL
-                        unit.state_entered_at = now_tick
+                        unit.state_entered_at = tick_data.now_tick
                     else:
                         unit.state = Unit.STATES.WALKING
-                        unit.state_entered_at = now_tick
+                        unit.state_entered_at = tick_data.now_tick
                 else:
-                    if has_job(unit, Enums.JOBS.FLOATER) && now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
+                    if has_job(unit, Enums.JOBS.FLOATER) && tick_data.now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
                         unit.state = Unit.STATES.FLOATING
-                        unit.state_entered_at = now_tick
+                        unit.state_entered_at = tick_data.now_tick
                     else:
                         unit.play("fall")
                         destination.y += 1
@@ -662,23 +672,23 @@ func tick() -> void:
             Unit.STATES.FLOATING:
                 if is_grounded:
                     unit.state = Unit.STATES.WALKING
-                    unit.state_entered_at = now_tick
+                    unit.state_entered_at = tick_data.now_tick
                 else:
-                    if now_tick == unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
+                    if tick_data.now_tick == unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
                         unit.play("float")
                         unit.stop()
                         unit.frame = 0
-                    elif now_tick > unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
+                    elif tick_data.now_tick > unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
                         var frame := unit.frame
                         if unit.frame + 1 > 9:
                             frame = 4
                         else:
                             frame += 1
 
-                        if frame <= 4 || now_tick % 4 == 0:
+                        if frame <= 4 || tick_data.now_tick % 4 == 0:
                             unit.frame = frame
 
-                        if now_tick % 3 == 0:
+                        if tick_data.now_tick % 3 == 0:
                             destination.y += 1
                     else:
                         destination.y += 1
@@ -691,15 +701,15 @@ func tick() -> void:
                 if hit_ceiling:
                     unit.direction *= -1
                     unit.state = Unit.STATES.fALLING
-                    unit.state_entered_at = now_tick
+                    unit.state_entered_at = tick_data.now_tick
                 elif hit_top_wall:
                     unit.state = Unit.STATES.CLIMBING_END
-                    unit.state_entered_at = now_tick
+                    unit.state_entered_at = tick_data.now_tick
                 else:
                     unit.play("climb")
                     unit.frame = state_tick % frames_count
                     destination.y -= 1
-                    
+
             Unit.STATES.CLIMBING_END:
                 unit.play("climb_end")
                 unit.frame = state_tick % frames_count
@@ -709,7 +719,7 @@ func tick() -> void:
                     destination.x = unit.position.x + 4 * unit.direction
                     destination.y = unit.position.y - 5
                     unit.state = Unit.STATES.WALKING
-                    unit.state_entered_at = now_tick
+                    unit.state_entered_at = tick_data.now_tick
 
             Unit.STATES.WALKING:
                 if is_grounded:
@@ -718,21 +728,21 @@ func tick() -> void:
                         var wall_in_front := has_flag(pos_x, int(unit.position.y), Enums.PIXELS.BLOCK)
                         if wall_in_front:
                             unit.state = Unit.STATES.CLIMBING
-                            unit.state_entered_at = now_tick
+                            unit.state_entered_at = tick_data.now_tick
 
                     if has_job(unit, Enums.JOBS.BASHER):
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.BASHER)
-                        
-                        var job_first_tick := now_tick == job_started_at
+
+                        var job_first_tick := tick_data.now_tick == job_started_at
                         if job_first_tick:
                             unit.play("dig_horizontal")
                             unit.stop()
 
-                        var is_done : int = now_tick >= job_started_at + JOB_BASHER_DURATION
+                        var is_done : int = tick_data.now_tick >= job_started_at + JOB_BASHER_DURATION
                         if is_done:
                             remove_job(unit, Enums.JOBS.BASHER)
                         else:
-                            var job_tick := now_tick - job_started_at
+                            var job_tick := tick_data.now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
@@ -756,16 +766,16 @@ func tick() -> void:
                     if has_job(unit, Enums.JOBS.MINER):
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.MINER)
 
-                        var job_first_tick = now_tick == job_started_at
+                        var job_first_tick = tick_data.now_tick == job_started_at
                         if job_first_tick:
                             unit.play("mine")
                             unit.stop()
-                            
-                        var is_done : int = now_tick >= job_started_at + JOB_MINER_DURATION
+
+                        var is_done : int = tick_data.now_tick >= job_started_at + JOB_MINER_DURATION
                         if is_done:
                             remove_job(unit, Enums.JOBS.MINER)
                         else:
-                            var job_tick := now_tick - job_started_at
+                            var job_tick := tick_data.now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
@@ -784,16 +794,16 @@ func tick() -> void:
                     if has_job(unit, Enums.JOBS.BUILDER):
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.BUILDER)
 
-                        var job_first_tick := now_tick == job_started_at
+                        var job_first_tick := tick_data.now_tick == job_started_at
                         if job_first_tick:
                             unit.play("build")
                             unit.stop()
-                            
-                        var is_done : int = now_tick >= job_started_at + JOB_BUILDER_DURATION
+
+                        var is_done : int = tick_data.now_tick >= job_started_at + JOB_BUILDER_DURATION
                         if is_done:
                             remove_job(unit, Enums.JOBS.BUILDER)
                         else:
-                            var job_tick := now_tick - job_started_at
+                            var job_tick := tick_data.now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
@@ -813,15 +823,15 @@ func tick() -> void:
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.DIGGER)
 
                         unit.play("dig_vertical")
-                        var job_tick := now_tick - job_started_at
+                        var job_tick := tick_data.now_tick - job_started_at
                         unit.frame = job_tick % frames_count
 
-                        if (now_tick - job_started_at) % JOB_DIGGER_STEP == 0:
+                        if (tick_data.now_tick - job_started_at) % JOB_DIGGER_STEP == 0:
                             var rect := Rect2(unit.position.x, unit.position.y + 3, unit.width, 6)
                             debug_draw.add_rect(rect, Color.red)
                             paint_rect(int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y), Enums.PIXELS.EMPTY)
 
-                            var is_not_done : int = now_tick < job_started_at + JOB_DIGGER_DURATION
+                            var is_not_done : int = tick_data.now_tick < job_started_at + JOB_DIGGER_DURATION
                             if is_not_done:
                                 destination.y += 1
 
@@ -832,11 +842,11 @@ func tick() -> void:
 
                         var rect := Rect2(unit.position.x, unit.position.y, unit.width, unit.height)
                         debug_draw.add_rect(rect, Color.red)
-                        if now_tick == job_started_at:
+                        if tick_data.now_tick == job_started_at:
                             unit.play("block")
                             paint_rect(int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y), Enums.PIXELS.BLOCK)
                         else:
-                            var job_tick := now_tick - job_started_at
+                            var job_tick := tick_data.now_tick - job_started_at
                             unit.frame = job_tick % frames_count
 
                         continue
@@ -870,7 +880,7 @@ func tick() -> void:
                         if is_over_hole:
                             destination.x += unit.direction * 2
                             unit.state = Unit.STATES.FALLING
-                            unit.state_entered_at = now_tick
+                            unit.state_entered_at = tick_data.now_tick
                         else:
                             # Walk forward
                             unit.play("walk")
@@ -880,39 +890,39 @@ func tick() -> void:
 
                 else:
                     unit.state = Unit.STATES.FALLING
-                    unit.state_entered_at = now_tick
+                    unit.state_entered_at = tick_data.now_tick
 
             Unit.STATES.DEAD_FALL:
-                if now_tick == unit.state_entered_at + 1:
+                if tick_data.now_tick == unit.state_entered_at + 1:
                     unit.play("dead_fall")
                     play_sound(config.sound_splat)
 
-                if now_tick == unit.state_entered_at + FALL_SPLAT_ANIM_DURATION:
+                if tick_data.now_tick == unit.state_entered_at + FALL_SPLAT_ANIM_DURATION:
                     unit.status = Unit.STATUSES.DEAD
-                    
+
         unit.flip_h = unit.direction == -1
         unit.position = destination
 
-    units_exited = 0
-    units_dead = 0
-    for unit_index in range(0, units_spawned):
-        var unit : Unit = units[unit_index]
+    tick_data.units_exited = 0
+    tick_data.units_dead = 0
+    for unit_index in range(0, tick_data.units_spawned):
+        var unit : Unit = tick_data.units[unit_index]
         if unit.status == Unit.STATUSES.EXITED:
-            units_exited += 1
+            tick_data.units_exited += 1
             unit.set_text("")
         if unit.status == Unit.STATUSES.DEAD:
             remove_all_jobs(unit)
             unit.set_text("")
             unit.visible = false
-            units_dead += 1
+            tick_data.units_dead += 1
 
-    if trigger_end_at == 0 && units_dead + units_exited == units_max:
-        trigger_end_at = now_tick + 50
+    if tick_data.trigger_end_at == 0 && tick_data.units_dead + tick_data.units_exited == level_data.units_max:
+        tick_data.trigger_end_at = tick_data.now_tick + 50
 
-    if now_tick == trigger_end_at:
-        is_ticking = false
-        
-        if units_exited >= units_goal:
+    if tick_data.now_tick == tick_data.trigger_end_at:
+        tick_data.is_ticking = false
+
+        if tick_data.units_exited >= level_data.units_goal:
             if current_level >= config.levels.size() - 1:
                 print("Game over")
                 unload_level()
@@ -924,7 +934,7 @@ func tick() -> void:
                 current_level += 1
                 load_level(config.levels[current_level])
                 yield(self, "level_loaded")
-                is_ticking = true
+                tick_data.is_ticking = true
                 start_level()
         else:
             print("Restarting current level")
@@ -932,33 +942,33 @@ func tick() -> void:
             yield(self, "level_unloaded")
             load_level(config.levels[current_level])
             yield(self, "level_loaded")
-            is_ticking = true
+            tick_data.is_ticking = true
             start_level()
 
     # Update UI
-    hud.set_spawned_label("Out: %s" % units_spawned)
-    hud.set_exited_label("In: %s" % units_exited)
-    hud.set_dead_label("Dead: %s" % units_dead)
+    hud.set_spawned_label("Out: %s" % tick_data.units_spawned)
+    hud.set_exited_label("In: %s" % tick_data.units_exited)
+    hud.set_dead_label("Dead: %s" % tick_data.units_dead)
 
-func spawn_unit(x: int, y: int) -> Unit: 
-    if units_spawned >= units.size():
-        print("Max units reached (%s)" % units.size())
+func spawn_unit(x: int, y: int) -> Unit:
+    if tick_data.units_spawned >= tick_data.units.size():
+        print("Max units reached (%s)" % tick_data.units.size())
         return null
 
     var unit : Unit = config.unit_prefab.instance()
-    unit.name = "Unit %s" % units_spawned
+    unit.name = "Unit %s" % tick_data.units_spawned
     unit.state = Unit.STATES.FALLING
-    unit.state_entered_at = now_tick
+    unit.state_entered_at = tick_data.now_tick
     unit.position.x = x
     unit.position.y = y - unit.height / 2
     unit.speed_scale = TICK_SPEED / 50
     unit.play("fall")
 
-    units[units_spawned] = unit
+    tick_data.units[tick_data.units_spawned] = unit
     scaler_node.add_child(unit)
     unit.set_text("")
 
-    units_spawned += 1
+    tick_data.units_spawned += 1
 
     return unit
 
@@ -970,14 +980,14 @@ func paint_rect(origin_x: int, origin_y: int, width: int, height: int, value: in
             var pos_x = origin_x - width / 2 + offset_x
             var pos_y = origin_y - height / 2 + offset_y
             if is_in_bounds(pos_x, pos_y):
-                var index := calculate_index(pos_x, pos_y, map_width)
+                var index := calculate_index(pos_x, pos_y, level_data.map_width)
                 pixels_to_draw.append(index)
 
     if pixels_to_draw.size() <= 0:
         return
 
     for index in pixels_to_draw:
-        map_data[index] = value
+        tick_data.map_data[index] = value
 
     update_map(origin_x - width / 2, origin_y - height / 2, width, height)
 
@@ -989,25 +999,25 @@ func paint_circle(origin_x: int, origin_y: int, radius: int, value: int) -> void
             var pos_x := int(round(origin_x + r * cos(angle * PI / 180)))
             var pos_y := int(round(origin_y + r * sin(angle * PI / 180)))
             if is_in_bounds(pos_x, pos_y):
-                var index := calculate_index(pos_x, pos_y, map_width)
+                var index := calculate_index(pos_x, pos_y, level_data.map_width)
                 pixels_to_draw.append(index)
 
     if pixels_to_draw.size() <= 0:
         return
 
     for index in pixels_to_draw:
-        map_data[index] = value
+        tick_data.map_data[index] = value
 
     update_map(origin_x - radius, origin_y - radius, radius * 2, radius * 2)
 
-func has_flag(x: int, y: int, flag: int) -> bool: 
+func has_flag(x: int, y: int, flag: int) -> bool:
     if not is_in_bounds(x, y):
         return false
-    var index := calculate_index(x, y, map_width)
-    return map_data[index] & flag != 0
+    var index := calculate_index(x, y, level_data.map_width)
+    return tick_data.map_data[index] & flag != 0
 
 func is_in_bounds(x: int, y: int) -> bool:
-    return x >= 0 && x < map_width && y >= 0 && y < map_height
+    return x >= 0 && x < level_data.map_width && y >= 0 && y < level_data.map_height
 
 func quit_game() -> void:
     print("Quitting game...")
@@ -1024,13 +1034,13 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     map_image.lock()
     for pixel_x in range(x, x + width):
         for pixel_y in range(y, y + height):
-            var index := pixel_y * map_width + pixel_x
-            if index < 0 || index >= map_data.size():
+            var index := pixel_y * level_data.map_width + pixel_x
+            if index < 0 || index >= tick_data.map_data.size():
                 continue
-            var pixel := map_data[index]
-            var pos_x := index % map_width
-            var pos_y := index / map_width
-            
+            var pixel := tick_data.map_data[index]
+            var pos_x := index % level_data.map_width
+            var pos_y := index / level_data.map_width
+
             var collision_color := Color.transparent
             if pixel != Enums.PIXELS.EMPTY:
                 collision_color = Color.red
@@ -1045,12 +1055,12 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     collision_image.unlock()
     map_image.unlock()
 
-    collision_texture.create_from_image(collision_image, 0)
-    collision_sprite.texture = collision_texture
+    level_data.collision_texture.create_from_image(collision_image, 0)
+    collision_sprite.texture = level_data.collision_texture
 
-    map_texture.create_from_image(map_image, 0)
-    map_sprite.texture = map_texture
-    
+    level_data.map_texture.create_from_image(map_image, 0)
+    map_sprite.texture = level_data.map_texture
+
     # var end := OS.get_ticks_usec()
     # var time := (end - start) / 1000.0
 
@@ -1071,14 +1081,14 @@ func play_sound(sound: AudioStream, pitch: float = 1.0) -> void:
     audio_player_sound.play()
 
 func add_job(unit: Unit, job_id: int) -> void:
-    unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = now_tick
+    unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = tick_data.now_tick
 
 func remove_job(unit: Unit, job_id: int) -> void:
     unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = 0
 
 func remove_all_jobs(unit: Unit) -> void:
     unit.jobs_started_at.resize(Enums.JOBS.size())
-    
+
 func has_job(unit: Unit, job_id: int) -> bool:
     return unit.jobs_started_at[Enums.JOBS.values().find(job_id)] > 0
 
@@ -1100,5 +1110,5 @@ func can_add_job(unit: Unit, job_id: int) -> bool:
             var is_grounded = has_flag(int(unit.position.x), int(unit.position.y + unit.height / 2), Enums.PIXELS.BLOCK)
             return unit.state == Unit.STATES.WALKING && (wall_in_front || is_grounded)
 
-        _: 
+        _:
             return true
