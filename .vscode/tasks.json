@@ -49,11 +49,7 @@
             "label": "Web: build (debug)",
             "type": "shell",
             "command": "date_time=$(date +%Y-%m-%d_%H-%M); echo $date_time; mkdir ./Builds/Web/$date_time; godot --no-window --export-debug 'Web' ./Builds/Web/$date_time/index.html && serve ./Builds/Web/$date_time",
-            "problemMatcher": [],
-            "group": {
-                "kind": "build",
-                "isDefault": true
-            }
+            "problemMatcher": []
         },
         {
             "label": "Web: build (release)",
