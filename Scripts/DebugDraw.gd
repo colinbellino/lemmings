@@ -25,7 +25,11 @@ func _process(_delta) -> void:
 func _draw() -> void:
     for rect_index in range(0, rects_count):
         var rect = rects[rect_index]
-        draw_rect(Rect2(game.to_viewport_position(rect.rect.position) * game.game_scale, rect.rect.size * game.game_scale), rect.color)
+        var r = Rect2(
+            game.to_viewport_position(rect.rect.position - Vector2(rect.rect.size.x, rect.rect.size.y) / 2) * game.game_scale,
+            rect.rect.size * game.game_scale
+        )
+        draw_rect(r, rect.color)
     rects_count = 0
     
     for text_index in range(0, texts_count):
