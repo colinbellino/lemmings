@@ -837,11 +837,11 @@ func tick() -> void:
 
                         continue
 
-                    var wall_check_pos_x := int(unit.position.x + unit.direction)
+                    var wall_check_pos_x := int(unit.position.x + 2 * unit.direction)
                     var wall_check_pos_y := int(unit.position.y + (unit.height / 2) - 1)
                     var destination_offset_y := 0
                     var hit_wall := false
-                    
+
                     for offset_y in range(0, -unit.climb_step, -1):
                         var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
                         debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
