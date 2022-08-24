@@ -1,61 +1,61 @@
 class_name DebugDraw
 extends Control
 
-var _game
-var _font : Font
-var _updated : bool
-var _rects : Array = []
-var _rects_count : int = 0
-var _texts : Array = []
-var _texts_count : int = 0
+var game
+var font : Font
+var updated : bool
+var rects : Array = []
+var rects_count : int = 0
+var texts : Array = []
+var texts_count : int = 0
 
 func _ready() -> void:
-    _game = get_node("/root/Game")
-    _font = self.get_font("font")
-    _rects.resize(300)
-    _texts.resize(300)
+    game = get_node("/root/Game")
+    font = self.get_font("font")
+    rects.resize(300)
+    texts.resize(300)
 
 func _process(_delta) -> void:
-    if _updated:
+    if updated:
         update()
-        _updated = false
+        updated = false
 
     pass
 
 func _draw() -> void:
-    for rect_index in range(0, _rects_count):
-        var rect = _rects[rect_index]
-        draw_rect(Rect2(_game.to_viewport_position(rect.rect.position) * _game.game_scale, rect.rect.size * _game.game_scale), rect.color)
-    _rects_count = 0
+    for rect_index in range(0, rects_count):
+        var rect = rects[rect_index]
+        draw_rect(Rect2(game.to_viewport_position(rect.rect.position) * game.game_scale, rect.rect.size * game.game_scale), rect.color)
+    rects_count = 0
     
-    for text_index in range(0, _texts_count):
-        var text = _texts[text_index]
-        draw_string(_font, _game.to_viewport_position(text.position) * _game.game_scale, text.text, text.color)
-    _texts_count = 0
+    for text_index in range(0, texts_count):
+        var text = texts[text_index]
+        draw_string(font, game.to_viewport_position(text.position) * game.game_scale, text.text, text.color)
+    texts_count = 0
 
 func add_rect(rect: Rect2, color: Color) -> void: 
-    if _rects_count >= _rects.size():
-        # printerr("Maximum rects drawn (%s)" % _rects.size())
+    if rects_count >= rects.size():
+        # printerr("Maximum rects drawn (%s)" % rects.size())
         return
 
-    _rects[_rects_count] = {
+    rects[rects_count] = {
         "rect": rect,
         "color": color,
     }
-    _rects_count += 1
+    rects_count += 1
 
-    _updated = true
+    updated = true
 
 func add_text(pos: Vector2, text: String, color: Color = Color.white) -> void:
-    if _texts_count >= _texts.size():
-        # printerr("Maximum texts drawn (%s)" % _texts.size())
+    if texts_count >= texts.size():
+        # printerr("Maximum texts drawn (%s)" % texts.size())
         return
     
-    _texts[_texts_count] = { 
+    texts[texts_count] = { 
         "position": pos,
         "text": text,
         "color": color,
     }
-    _texts_count += 1
+    texts_count += 1
 
-    _updated = true
+    updated = true
