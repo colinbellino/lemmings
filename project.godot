@@ -118,9 +118,7 @@ gdscript/warnings/unsafe_call_argument=true
 
 window/size/width=1920
 window/size/height=1080
-window/size/resizable=false
 window/dpi/allow_hidpi=true
-window/vsync/use_vsync=false
 window/stretch/mode="viewport"
 
 [editor_plugins]
