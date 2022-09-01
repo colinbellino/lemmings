@@ -18,3 +18,4 @@ export var job_builder : int
 export var job_basher : int
 export var job_miner : int
 export var job_digger : int
+export var color : Color = Color.blue

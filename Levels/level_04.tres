@@ -25,3 +25,4 @@ job_builder = 0
 job_basher = 50
 job_miner = 0
 job_digger = 0
+color = Color( 0, 0.25098, 0.313726, 1 )

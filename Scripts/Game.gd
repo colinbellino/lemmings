@@ -59,6 +59,7 @@ class LevelData:
     var spawn_is_active : bool
     var spawn_rate : int
     var jobs_count : Dictionary
+    var color : Color
 
 # Scene stuff
 onready var config : GameConfig
@@ -332,6 +333,7 @@ func load_level(level: Level) -> void:
     level_data.units_max = level.units_max
     level_data.units_goal = level.units_goal
     level_data.spawn_rate = level.spawn_rate
+    level_data.color = level.color
     increase_spawn_rate(0) # Just to make sure it's clamped to a valid value
     level_data.jobs_count = {}
     level_data.jobs_count[Enums.JOBS.CLIMBER] = level.job_climber
@@ -1112,7 +1114,7 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
             if pixel == Enums.PIXELS.EMPTY:
                 map_image.set_pixel(pos_x, pos_y, Color.transparent)
             elif has_flag(pos_x, pos_y, Enums.PIXELS.PAINT):
-                map_image.set_pixel(pos_x, pos_y, Color.blue)
+                map_image.set_pixel(pos_x, pos_y, level_data.color)
 
             # pixel_count += 1
     collision_image.unlock()
