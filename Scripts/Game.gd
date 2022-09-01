@@ -1045,14 +1045,17 @@ func paint_rect(origin_x: int, origin_y: int, width: int, height: int, value: in
     update_map(origin_x - width / 2, origin_y - height / 2, width, height)
 
 func paint_circle(origin_x: int, origin_y: int, radius: int, value: int) -> void:
+    # var start := Time.get_ticks_usec()
     var pixels_to_draw : PoolIntArray = []
 
-    for r in range(0, radius):
-        for angle in range(0, 360):
-            var pos_x := int(round(origin_x + r * cos(angle * PI / 180)))
-            var pos_y := int(round(origin_y + r * sin(angle * PI / 180)))
-            if is_in_bounds(pos_x, pos_y):
-                var index := calculate_index(pos_x, pos_y, level_data.map_width)
+    for y in range(2 * radius):
+        for x in range(2 * radius):
+            var delta_x := radius - x
+            var delta_y := radius - y
+            var distance := sqrt(delta_x * delta_x + delta_y * delta_y)
+            var transparency = clamp(radius - distance, 0, 1);
+            if transparency > 0.5:
+                var index := calculate_index(origin_x - radius + x, origin_y - radius + y, level_data.map_width)
                 pixels_to_draw.append(index)
 
     if pixels_to_draw.size() <= 0:
@@ -1060,6 +1063,10 @@ func paint_circle(origin_x: int, origin_y: int, radius: int, value: int) -> void
 
     for index in pixels_to_draw:
         game_data.map_data[index] = value
+
+    # var end := Time.get_ticks_usec()
+    # var time := (end - start) / 1000.0
+    # print("[DEBUG] paint_circle %s pixels in %sms (now_tick: %s)" % [pixels_to_draw.size(), time, game_data.now_tick])
 
     update_map(origin_x - radius, origin_y - radius, radius * 2, radius * 2)
 
@@ -1076,12 +1083,9 @@ func quit_game() -> void:
     print("Quitting game...")
     get_tree().quit()
 
-# TODO: Don't do collision update if not in debug mode
 func update_map(x: int, y: int, width: int, height: int) -> void:
-    # print("update_map: ", [x, y, width, height])
-    # var start := OS.get_ticks_usec()
-
-    # var count := 0
+    # var start := Time.get_ticks_usec()
+    # var pixel_count := 0
 
     collision_image.lock()
     map_image.lock()
@@ -1104,7 +1108,7 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
             elif has_flag(pos_x, pos_y, Enums.PIXELS.PAINT):
                 map_image.set_pixel(pos_x, pos_y, Color.blue)
 
-            # count += 1
+            # pixel_count += 1
     collision_image.unlock()
     map_image.unlock()
 
@@ -1114,10 +1118,9 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     level_data.map_texture.create_from_image(map_image, 0)
     map_sprite.texture = level_data.map_texture
 
-    # var end := OS.get_ticks_usec()
+    # var end := Time.get_ticks_usec()
     # var time := (end - start) / 1000.0
-
-    # print("collision_update: %s pixels in %sms" % [count, time])
+    # print("[DEBUG] Updated %s pixels in %sms (now_tick: %s)" % [pixel_count, time, game_data.now_tick])
 
 static func calculate_index(x: int, y: int, width: int) -> int:
     return y * width + x
