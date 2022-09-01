@@ -106,15 +106,28 @@ func _ready() -> void:
     hud.connect("spawn_rate_down_pressed", self, "spawn_rate_down")
 
     set_toggle_debug_visibility(false)
-    # if OS.is_debug_build():
-    #     AudioServer.set_bus_mute(audio_bus_master, true)
-    #     start_game()
-    #     return
+    if OS.is_debug_build():
+        AudioServer.set_bus_mute(audio_bus_master, true)
+        start_game()
+        return
 
     start_title()
 
 func _process(delta: float) -> void:
     tick_data.now += delta * 1000 # Delta is in seconds, now in Milliseconds
+
+    for i in range(1, 12):
+        if Input.is_key_pressed(KEY_SHIFT) && Input.is_action_just_released("debug_%s" % i):
+            current_level = i - 1
+            print("Loading level: %s" % [current_level])
+
+            unload_level()
+            yield(self, "level_unloaded")
+
+            load_level(config.levels[current_level])
+            yield(self, "level_loaded")
+            tick_data.is_ticking = true
+            start_level()
 
     if Input.is_action_just_released("debug_1"):
         print("Toggling debug mode")
@@ -185,6 +198,15 @@ func _process(delta: float) -> void:
         scaler_node.scale = Vector2(game_scale, game_scale)
         debug_draw.update()
 
+    # Update cursor
+    var mouse_map_position := get_mouse_position()
+    if level_data != null:
+        var unit_index := get_unit_at(int(mouse_map_position.x), int(mouse_map_position.y))
+        if unit_index > -1:
+            set_cursor(CURSOR_BORDER)
+        else:
+            set_cursor(CURSOR_DEFAULT)
+
     if tick_data.is_ticking:
         if Input.is_action_just_released("ui_down"):
             increase_spawn_rate(-10)
@@ -199,15 +221,6 @@ func _process(delta: float) -> void:
             Engine.time_scale = TIME_SCALE * 20
         else:
             Engine.time_scale = TIME_SCALE
-
-        var mouse_map_position := get_mouse_position()
-
-        # Update cursor
-        var unit_index := get_unit_at(int(mouse_map_position.x), int(mouse_map_position.y))
-        if unit_index > -1:
-            set_cursor(CURSOR_BORDER)
-        else:
-            set_cursor(CURSOR_DEFAULT)
 
         if Input.is_mouse_button_pressed(BUTTON_LEFT):
             use_tool(tool_primary, int(mouse_map_position.x), int(mouse_map_position.y), true)
