@@ -850,6 +850,12 @@ func tick() -> void:
                             unit.play("build")
                             unit.stop()
 
+                        var hit_wall := has_flag(int(unit.position.x + 4 * unit.direction), int(unit.position.y + 2), Enums.PIXELS.BLOCK)
+                        var hit_ceiling := has_flag(int(unit.position.x + 4 * unit.direction), int(unit.position.y - unit.height / 2), Enums.PIXELS.BLOCK)
+                        if hit_wall || hit_ceiling:
+                            remove_job(unit, Enums.JOBS.BUILDER)
+                            continue
+
                         var is_done : int = game_data.now_tick >= job_started_at + JOB_BUILDER_DURATION
                         if is_done:
                             remove_job(unit, Enums.JOBS.BUILDER)
