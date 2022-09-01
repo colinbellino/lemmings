@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=26 format=2]
+[gd_resource type="Resource" load_steps=24 format=2]
 
 [ext_resource path="res://Scripts/GameConfig.gd" type="Script" id=1]
 [ext_resource path="res://Levels/level_00.tres" type="Resource" id=2]
@@ -18,17 +18,15 @@
 [ext_resource path="res://Audio/Sounds/LETSGO.WAV" type="AudioStream" id=16]
 [ext_resource path="res://Audio/Sounds/OHNO.WAV" type="AudioStream" id=17]
 [ext_resource path="res://Audio/Sounds/DOOR.WAV" type="AudioStream" id=18]
-[ext_resource path="res://Levels/level_99.tres" type="Resource" id=19]
 [ext_resource path="res://Levels/level_04.tres" type="Resource" id=20]
 [ext_resource path="res://Prefabs/ExplosionDust.tscn" type="PackedScene" id=21]
 [ext_resource path="res://Levels/level_03.tres" type="Resource" id=22]
 [ext_resource path="res://Levels/level_05.tres" type="Resource" id=23]
 [ext_resource path="res://Levels/level_06.tres" type="Resource" id=24]
-[ext_resource path="res://Levels/level_98.tres" type="Resource" id=25]
 
 [resource]
 script = ExtResource( 1 )
-levels = [ ExtResource( 25 ), ExtResource( 2 ), ExtResource( 3 ), ExtResource( 7 ), ExtResource( 22 ), ExtResource( 20 ), ExtResource( 23 ), ExtResource( 24 ), ExtResource( 19 ) ]
+levels = [ ExtResource( 2 ), ExtResource( 3 ), ExtResource( 7 ), ExtResource( 22 ), ExtResource( 20 ), ExtResource( 23 ), ExtResource( 24 ) ]
 cursor_default_x1 = ExtResource( 10 )
 cursor_default_x2 = ExtResource( 11 )
 cursor_default_x4 = ExtResource( 5 )

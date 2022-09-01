@@ -95,23 +95,23 @@ var level_data : LevelData
 
 func _ready() -> void:
     tick_data = TickData.new()
-    tick_data.now = OS.get_ticks_msec()
-    game_scale = GAME_SCALE
-    scaler_node.scale = Vector2(game_scale, game_scale)
-
     config = ResourceLoader.load("res://default_game_config.tres")
 
-    set_toggle_debug_visibility(false)
-    if OS.is_debug_build():
-        AudioServer.set_bus_mute(audio_bus_master, true)
-        start_game()
-        return
+    # Init UI
+    action0_button.connect("pressed", self, "select_tool", [Enums.TOOLS.PAINT_RECT])
+    action1_button.connect("pressed", self, "select_tool", [Enums.TOOLS.ERASE_RECT])
+    action2_button.connect("pressed", self, "select_tool", [Enums.TOOLS.SPAWN_UNIT])
+    hud.connect("tool_selected", self, "select_tool")
+    hud.connect("spawn_rate_up_pressed", self, "spawn_rate_up")
+    hud.connect("spawn_rate_down_pressed", self, "spawn_rate_down")
 
-    title.open()
-    var action = yield(title, "action_selected")
-    match action:
-        0: start_game()
-        1: quit_game()
+    set_toggle_debug_visibility(false)
+    # if OS.is_debug_build():
+    #     AudioServer.set_bus_mute(audio_bus_master, true)
+    #     start_game()
+    #     return
+
+    start_title()
 
 func _process(delta: float) -> void:
     tick_data.now += delta * 1000 # Delta is in seconds, now in Milliseconds
@@ -160,6 +160,10 @@ func _process(delta: float) -> void:
         unload_level()
         yield(self, "level_unloaded")
         current_level += 1
+        if current_level > config.levels.size() - 1:
+            current_level = 0
+            start_title()
+            return
         load_level(config.levels[current_level])
         yield(self, "level_loaded")
         tick_data.is_ticking = true
@@ -239,7 +243,22 @@ func _process(delta: float) -> void:
                 debug_draw.update()
                 tick_data.now_tick += 1
 
+func start_title() -> void:
+    transitions.close()
+    yield(transitions, "closed")
+
+    title.open()
+    var action = yield(title, "action_selected")
+    match action:
+        0: start_game()
+        1: quit_game()
+
 func start_game() -> void:
+    tick_data.now = OS.get_ticks_msec()
+
+    game_scale = GAME_SCALE
+    scaler_node.scale = Vector2(game_scale, game_scale)
+
     title.close()
     yield(title, "closed")
 
@@ -247,14 +266,6 @@ func start_game() -> void:
     yield(transitions, "opened")
 
     set_cursor(CURSOR_DEFAULT)
-
-    # Init UI
-    action0_button.connect("pressed", self, "select_tool", [Enums.TOOLS.PAINT_RECT])
-    action1_button.connect("pressed", self, "select_tool", [Enums.TOOLS.ERASE_RECT])
-    action2_button.connect("pressed", self, "select_tool", [Enums.TOOLS.SPAWN_UNIT])
-    hud.connect("tool_selected", self, "select_tool")
-    hud.connect("spawn_rate_up_pressed", self, "spawn_rate_up")
-    hud.connect("spawn_rate_down_pressed", self, "spawn_rate_down")
 
     collision_image = Image.new()
 
@@ -700,7 +711,7 @@ func tick() -> void:
 
                 if hit_ceiling:
                     unit.direction *= -1
-                    unit.state = Unit.STATES.fALLING
+                    unit.state = Unit.STATES.FALLING
                     unit.state_entered_at = tick_data.now_tick
                 elif hit_top_wall:
                     unit.state = Unit.STATES.CLIMBING_END
@@ -932,6 +943,10 @@ func tick() -> void:
                 unload_level()
                 yield(self, "level_unloaded")
                 current_level += 1
+                if current_level > config.levels.size() - 1:
+                    current_level = 0
+                    start_title()
+                    return
                 load_level(config.levels[current_level])
                 yield(self, "level_loaded")
                 tick_data.is_ticking = true
