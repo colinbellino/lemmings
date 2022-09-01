@@ -35,7 +35,7 @@ const FALL_DURATION_FLOAT : int = 25
 const FALL_SPLAT_ANIM_DURATION : int = 27
 const LEVEL_END_DELAY : int = 20
 
-class TickData:
+class GameData:
     var now : float
     var now_tick : int
     var is_ticking : bool
@@ -90,11 +90,11 @@ var tool_tertiary : int = Enums.TOOLS.ERASE_RECT
 var mouse_button_pressed : int
 var debug_is_visible : bool
 var game_scale : int
-var tick_data : TickData
+var game_data : GameData
 var level_data : LevelData
 
 func _ready() -> void:
-    tick_data = TickData.new()
+    game_data = GameData.new()
     config = ResourceLoader.load("res://default_game_config.tres")
 
     # Init UI
@@ -106,6 +106,7 @@ func _ready() -> void:
     hud.connect("spawn_rate_down_pressed", self, "spawn_rate_down")
 
     set_toggle_debug_visibility(false)
+
     if OS.is_debug_build():
         AudioServer.set_bus_mute(audio_bus_master, true)
         start_game()
@@ -114,89 +115,107 @@ func _ready() -> void:
     start_title()
 
 func _process(delta: float) -> void:
-    tick_data.now += delta * 1000 # Delta is in seconds, now in Milliseconds
-
-    for i in range(1, 12):
-        if Input.is_key_pressed(KEY_SHIFT) && Input.is_action_just_released("debug_%s" % i):
-            current_level = i - 1
-            print("Loading level: %s" % [current_level])
-
-            unload_level()
-            yield(self, "level_unloaded")
-
-            load_level(config.levels[current_level])
-            yield(self, "level_loaded")
-            tick_data.is_ticking = true
-            start_level()
+    game_data.now += delta * 1000 # Delta is in seconds, now in Milliseconds
 
     if Input.is_action_just_released("debug_1"):
-        print("Toggling debug mode")
+        print("[DEBUG] Toggling debug mode")
         set_toggle_debug_visibility(!debug_is_visible)
         debug_draw.update()
+        return
 
     if Input.is_action_just_released("debug_2"):
-        print("Toggling map")
+        print("[DEBUG] Toggling map")
         map_sprite.visible = !map_sprite.visible
+        return
 
     if Input.is_action_just_released("debug_4"):
-        print("Toggling audio mute")
+        print("[DEBUG] Toggling audio mute")
         AudioServer.set_bus_mute(audio_bus_master, !AudioServer.is_bus_mute(audio_bus_master))
+        return
 
     if Input.is_action_just_released("debug_5"):
-        print("Restarting level")
+        print("[DEBUG] Restarting level")
+
         unload_level()
         yield(self, "level_unloaded")
+
         load_level(config.levels[current_level])
         yield(self, "level_loaded")
-        tick_data.is_ticking = true
+
         start_level()
+        return
 
     if Input.is_action_just_released("debug_6"):
         var filename := "res://Screenshots/%s.png" % OS.get_system_time_msecs()
         var image := get_viewport().get_texture().get_data()#.get_rect(Rect2(0, get_viewport().size.y - 180, 320, 180))
         image.flip_y()
         image.save_png(filename)
-        print("Screenshot taken: ", filename)
+        print("[DEBUG] Screenshot taken: ", filename)
+        return
 
     if Input.is_action_just_released("debug_11"):
-        print("Previous level")
+        print("[DEBUG] Previous level")
+
         unload_level()
         yield(self, "level_unloaded")
+
         current_level -= 1
+
         load_level(config.levels[current_level])
         yield(self, "level_loaded")
-        tick_data.is_ticking = true
+
         start_level()
+        return
 
     if Input.is_action_just_released("debug_12"):
-        print("Next level")
+        print("[DEBUG] Next level")
+
         unload_level()
         yield(self, "level_unloaded")
+
         current_level += 1
+
         if current_level > config.levels.size() - 1:
             current_level = 0
             start_title()
-            return
-        load_level(config.levels[current_level])
-        yield(self, "level_loaded")
-        tick_data.is_ticking = true
-        start_level()
+        else:
+            load_level(config.levels[current_level])
+            yield(self, "level_loaded")
+
+            start_level()
+
+        return
 
     if Input.is_key_pressed(KEY_ESCAPE):
         quit_game()
+        return
 
     if Input.is_action_just_released("ui_select"):
-        tick_data.is_ticking = !tick_data.is_ticking
-        if tick_data.is_ticking:
+        game_data.is_ticking = !game_data.is_ticking
+        if game_data.is_ticking:
             Engine.time_scale = TIME_SCALE
         else:
             Engine.time_scale = 0
-        print("Toggling pause")
+        print("[DEBUG] Toggling pause")
 
-    if Input.is_action_just_released("ui_accept"):
-        game_scale = int(max(1, (game_scale + 1) % (GAME_SCALE + 1)))
-        scaler_node.scale = Vector2(game_scale, game_scale)
-        debug_draw.update()
+    # if Input.is_action_just_released("ui_accept"):
+    #     game_scale = int(max(1, (game_scale + 1) % (GAME_SCALE + 1)))
+    #     scaler_node.scale = Vector2(game_scale, game_scale)
+    #     debug_draw.update()
+    #     return
+
+    for i in range(1, 12):
+        if Input.is_key_pressed(KEY_SHIFT) && Input.is_action_just_released("debug_%s" % i):
+            current_level = i - 1
+            print("[DEBUG] Loading level: %s" % [current_level])
+
+            unload_level()
+            yield(self, "level_unloaded")
+
+            load_level(config.levels[current_level])
+            yield(self, "level_loaded")
+            start_level()
+
 
     # Update cursor
     var mouse_map_position := get_mouse_position()
@@ -207,7 +226,7 @@ func _process(delta: float) -> void:
         else:
             set_cursor(CURSOR_DEFAULT)
 
-    if tick_data.is_ticking:
+    if game_data.is_ticking:
         if Input.is_action_just_released("ui_down"):
             increase_spawn_rate(-10)
         if Input.is_action_just_released("ui_up"):
@@ -218,7 +237,7 @@ func _process(delta: float) -> void:
             camera.position.x = clamp(camera.position.x + 10, 0, level_data.map_width - camera.get_viewport().size.x / game_scale)
 
         if Input.is_key_pressed(KEY_SHIFT):
-            Engine.time_scale = TIME_SCALE * 20
+            Engine.time_scale = TIME_SCALE * 100
         else:
             Engine.time_scale = TIME_SCALE
 
@@ -232,31 +251,32 @@ func _process(delta: float) -> void:
         debug_label.set_text(JSON.print({
             "FPS": Performance.get_monitor(Performance.TIME_FPS),
             "Scale": game_scale,
-            "Units": "%s / %s" % [tick_data.units_spawned, tick_data.units.size()],
+            "Units": "%s / %s" % [game_data.units_spawned, game_data.units.size()],
             "Spawn rate": level_data.spawn_rate,
-            "Goal": "%s / %s" % [tick_data.units_exited, level_data.units_goal],
+            "Goal": "%s / %s" % [game_data.units_exited, level_data.units_goal],
             "Jobs": level_data.jobs_count,
         }, "  "))
 
-        if tick_data.now >= tick_data.next_tick_at:
+        if game_data.now >= game_data.next_tick_at:
             tick()
-            tick_data.now_tick += 1
-            tick_data.next_tick_at = tick_data.now + TICK_SPEED
+            game_data.now_tick += 1
+            game_data.next_tick_at = game_data.now + TICK_SPEED / Engine.time_scale
 
     else:
         if OS.is_debug_build():
             if Input.is_action_just_released("ui_left"):
-                # tick_data.now_tick -= 1
+                # game_data.now_tick -= 1
                 # tick()
-                # print("Previous tick: ", tick_data.now_tick)
+                # print("Previous tick: ", game_data.now_tick)
                 pass
             if Input.is_action_just_released("ui_right"):
-                print("Next tick: ", tick_data.now_tick)
+                print("Next tick: ", game_data.now_tick)
                 tick()
                 debug_draw.update()
-                tick_data.now_tick += 1
+                game_data.now_tick += 1
 
 func start_title() -> void:
+    print("Opening title screen")
     transitions.close()
     yield(transitions, "closed")
 
@@ -267,7 +287,8 @@ func start_title() -> void:
         1: quit_game()
 
 func start_game() -> void:
-    tick_data.now = OS.get_ticks_msec()
+    game_data = GameData.new()
+    game_data.now = OS.get_ticks_msec()
 
     game_scale = GAME_SCALE
     scaler_node.scale = Vector2(game_scale, game_scale)
@@ -285,7 +306,7 @@ func start_game() -> void:
     # Load and start the level
     load_level(config.levels[current_level])
     yield(self, "level_loaded")
-    tick_data.is_ticking = true
+    game_data.is_ticking = true
     start_level()
 
 func get_mouse_position() -> Vector2 :
@@ -333,7 +354,7 @@ func load_level(level: Level) -> void:
 
     var units := []
     units.resize(level_data.units_max)
-    tick_data.units = units
+    game_data.units = units
 
     level_data.map_width = map_image.get_width()
     level_data.map_height = map_image.get_height()
@@ -360,7 +381,7 @@ func load_level(level: Level) -> void:
                 value = Enums.PIXELS.EMPTY
             map_data.set(index, value)
     map_image.unlock()
-    tick_data.map_data = map_data
+    game_data.map_data = map_data
 
     # Prepare the images
     level_data.map_texture = ImageTexture.new()
@@ -397,14 +418,16 @@ func load_level(level: Level) -> void:
 func unload_level() -> void:
     transitions.open()
     yield(transitions, "opened")
+    hud.close()
+    yield(hud, "closed")
 
-    for unit_index in tick_data.units_spawned:
-        var unit : Unit = tick_data.units[unit_index]
+    for unit_index in game_data.units_spawned:
+        var unit : Unit = game_data.units[unit_index]
         unit.queue_free()
-    tick_data.units_spawned = 0
-    tick_data.units_exited = 0
-    tick_data.units_dead = 0
-    tick_data.trigger_end_at = 0
+    game_data.units_spawned = 0
+    game_data.units_exited = 0
+    game_data.units_dead = 0
+    game_data.trigger_end_at = 0
 
     debug_draw.update()
 
@@ -415,10 +438,14 @@ func unload_level() -> void:
 
     audio_player_music.stop()
 
+    game_data.is_ticking = false
+
     emit_signal("level_unloaded")
 
 func start_level() -> void:
     print_stray_nodes()
+
+    game_data.is_ticking = true
 
     var level : Level = config.levels[current_level]
 
@@ -455,8 +482,8 @@ func get_unit_at(x: int, y: int) -> int:
     if not is_in_bounds(x, y):
         return -1
 
-    for unit_index in range(0, tick_data.units_spawned):
-        var unit : Unit = tick_data.units[unit_index]
+    for unit_index in range(0, game_data.units_spawned):
+        var unit : Unit = game_data.units[unit_index]
         if is_inside_rect(Vector2(x, y), unit.get_bounds_centered()):
             return unit_index
 
@@ -518,13 +545,13 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             level_data.spawn_is_active = false
             play_sound(config.sound_assign_job)
 
-            if tick_data.units_spawned == 0:
+            if game_data.units_spawned == 0:
                 return
 
-            tick_data.trigger_end_at = tick_data.now_tick + JOB_BOMBER_DURATION + tick_data.units[0].frames.get_frame_count("explode") + LEVEL_END_DELAY
+            game_data.trigger_end_at = game_data.now_tick + JOB_BOMBER_DURATION + game_data.units[0].frames.get_frame_count("explode") + LEVEL_END_DELAY
 
-            for unit_index in range(0, tick_data.units_spawned):
-                var unit : Unit = tick_data.units[unit_index]
+            for unit_index in range(0, game_data.units_spawned):
+                var unit : Unit = game_data.units[unit_index]
                 add_job(unit, Enums.JOBS.BOMBER)
         _:
             if pressed:
@@ -533,10 +560,10 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
             print("Tool not implemented: ", Enums.TOOLS.keys()[tool_id])
             return
 
-    print("Used tool: %s at (%s,%s)" % [Enums.TOOLS.keys()[tool_id], x, y])
+    # print("Used tool: %s at (%s,%s)" % [Enums.TOOLS.keys()[tool_id], x, y])
 
 func select_tool(tool_id: int) -> void:
-    print("Tool selected: ", Enums.TOOLS.keys()[tool_id])
+    # print("Tool selected: ", Enums.TOOLS.keys()[tool_id])
     if tool_id < Enums.JOBS.size():
         tool_primary = tool_id
         hud.select_job(tool_id)
@@ -571,7 +598,7 @@ func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> v
     if unit_index == -1:
         return
 
-    var unit : Unit = tick_data.units[unit_index]
+    var unit : Unit = game_data.units[unit_index]
     if has_job(unit, job_id):
         return
 
@@ -591,13 +618,13 @@ func set_toggle_debug_visibility(value: bool) -> void:
 
 func tick() -> void:
     if level_data.spawn_is_active:
-        if tick_data.now_tick % (100 - level_data.spawn_rate) == 0:
+        if game_data.now_tick % (100 - level_data.spawn_rate) == 0:
             spawn_unit(int(level_data.entrance_position.x), int(level_data.entrance_position.y))
-            if tick_data.units_spawned >= tick_data.units.size():
+            if game_data.units_spawned >= game_data.units.size():
                 level_data.spawn_is_active = false
 
-    for unit_index in range(0, tick_data.units_spawned):
-        var unit : Unit = tick_data.units[unit_index]
+    for unit_index in range(0, game_data.units_spawned):
+        var unit : Unit = game_data.units[unit_index]
 
         if OS.is_debug_build():
             var jobs_str := ""
@@ -619,7 +646,7 @@ func tick() -> void:
         if not is_in_bounds(ground_check_pos_x, ground_check_pos_y):
             # print("%s: OOB" % unit.name)
             unit.state = Unit.STATES.DEAD_FALL
-            unit.state_entered_at = tick_data.now_tick
+            unit.state_entered_at = game_data.now_tick
 
         if is_inside_rect(level_data.exit_position, Rect2(unit.position.x, unit.position.y, 1, unit.height)):
             unit.play("exit")
@@ -635,25 +662,25 @@ func tick() -> void:
         debug_draw.add_rect(Rect2(unit.position.x, unit.position.y, 1, 1), color)
 
         var frames_count := unit.frames.get_frame_count(unit.animation)
-        var state_tick := tick_data.now_tick - unit.state_entered_at
+        var state_tick := game_data.now_tick - unit.state_entered_at
 
         if has_job(unit, Enums.JOBS.BOMBER):
             var job_started_at := get_job_started_at(unit, Enums.JOBS.BOMBER)
-            if tick_data.now_tick <= job_started_at + JOB_BOMBER_DURATION:
-                if (tick_data.now_tick - job_started_at) % JOB_BOMBER_STEP == 0:
-                    var countdown : int = JOB_BOMBER_DURATION / JOB_BOMBER_STEP - (tick_data.now_tick - job_started_at) / JOB_BOMBER_STEP
+            if game_data.now_tick <= job_started_at + JOB_BOMBER_DURATION:
+                if (game_data.now_tick - job_started_at) % JOB_BOMBER_STEP == 0:
+                    var countdown : int = JOB_BOMBER_DURATION / JOB_BOMBER_STEP - (game_data.now_tick - job_started_at) / JOB_BOMBER_STEP
                     unit.set_text(String(countdown))
 
-            var timer_done : int = tick_data.now_tick == job_started_at + JOB_BOMBER_DURATION
+            var timer_done : int = game_data.now_tick == job_started_at + JOB_BOMBER_DURATION
             if timer_done:
                 unit.set_text("")
                 if is_grounded:
                     unit.state = Unit.STATES.IDLE
-                    unit.state_entered_at = tick_data.now_tick
+                    unit.state_entered_at = game_data.now_tick
                     unit.play("explode")
                 play_sound(config.sound_deathrattle)
 
-            var exploding := tick_data.now_tick >= job_started_at + JOB_BOMBER_DURATION
+            var exploding := game_data.now_tick >= job_started_at + JOB_BOMBER_DURATION
             if exploding:
                 unit.frame = state_tick % frames_count
                 var animation_done : int = unit.frame == frames_count - 1
@@ -679,16 +706,16 @@ func tick() -> void:
                 remove_job(unit, Enums.JOBS.BUILDER)
 
                 if is_grounded:
-                    if tick_data.now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
+                    if game_data.now_tick >= unit.state_entered_at + FALL_DURATION_FATAL:
                         unit.state = Unit.STATES.DEAD_FALL
-                        unit.state_entered_at = tick_data.now_tick
+                        unit.state_entered_at = game_data.now_tick
                     else:
                         unit.state = Unit.STATES.WALKING
-                        unit.state_entered_at = tick_data.now_tick
+                        unit.state_entered_at = game_data.now_tick
                 else:
-                    if has_job(unit, Enums.JOBS.FLOATER) && tick_data.now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
+                    if has_job(unit, Enums.JOBS.FLOATER) && game_data.now_tick >= unit.state_entered_at + FALL_DURATION_FLOAT:
                         unit.state = Unit.STATES.FLOATING
-                        unit.state_entered_at = tick_data.now_tick
+                        unit.state_entered_at = game_data.now_tick
                     else:
                         unit.play("fall")
                         destination.y += 1
@@ -696,23 +723,23 @@ func tick() -> void:
             Unit.STATES.FLOATING:
                 if is_grounded:
                     unit.state = Unit.STATES.WALKING
-                    unit.state_entered_at = tick_data.now_tick
+                    unit.state_entered_at = game_data.now_tick
                 else:
-                    if tick_data.now_tick == unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
+                    if game_data.now_tick == unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
                         unit.play("float")
                         unit.stop()
                         unit.frame = 0
-                    elif tick_data.now_tick > unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
+                    elif game_data.now_tick > unit.state_entered_at + JOB_FLOATER_FLOATER_DELAY:
                         var frame := unit.frame
                         if unit.frame + 1 > 9:
                             frame = 4
                         else:
                             frame += 1
 
-                        if frame <= 4 || tick_data.now_tick % 4 == 0:
+                        if frame <= 4 || game_data.now_tick % 4 == 0:
                             unit.frame = frame
 
-                        if tick_data.now_tick % 3 == 0:
+                        if game_data.now_tick % 3 == 0:
                             destination.y += 1
                     else:
                         destination.y += 1
@@ -725,10 +752,10 @@ func tick() -> void:
                 if hit_ceiling:
                     unit.direction *= -1
                     unit.state = Unit.STATES.FALLING
-                    unit.state_entered_at = tick_data.now_tick
+                    unit.state_entered_at = game_data.now_tick
                 elif hit_top_wall:
                     unit.state = Unit.STATES.CLIMBING_END
-                    unit.state_entered_at = tick_data.now_tick
+                    unit.state_entered_at = game_data.now_tick
                 else:
                     unit.play("climb")
                     unit.frame = state_tick % frames_count
@@ -743,7 +770,7 @@ func tick() -> void:
                     destination.x = unit.position.x + 4 * unit.direction
                     destination.y = unit.position.y - 5
                     unit.state = Unit.STATES.WALKING
-                    unit.state_entered_at = tick_data.now_tick
+                    unit.state_entered_at = game_data.now_tick
 
             Unit.STATES.WALKING:
                 if is_grounded:
@@ -752,21 +779,21 @@ func tick() -> void:
                         var wall_in_front := has_flag(pos_x, int(unit.position.y), Enums.PIXELS.BLOCK)
                         if wall_in_front:
                             unit.state = Unit.STATES.CLIMBING
-                            unit.state_entered_at = tick_data.now_tick
+                            unit.state_entered_at = game_data.now_tick
 
                     if has_job(unit, Enums.JOBS.BASHER):
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.BASHER)
 
-                        var job_first_tick := tick_data.now_tick == job_started_at
+                        var job_first_tick := game_data.now_tick == job_started_at
                         if job_first_tick:
                             unit.play("dig_horizontal")
                             unit.stop()
 
-                        var is_done : int = tick_data.now_tick >= job_started_at + JOB_BASHER_DURATION
+                        var is_done : int = game_data.now_tick >= job_started_at + JOB_BASHER_DURATION
                         if is_done:
                             remove_job(unit, Enums.JOBS.BASHER)
                         else:
-                            var job_tick := tick_data.now_tick - job_started_at
+                            var job_tick := game_data.now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
@@ -790,16 +817,16 @@ func tick() -> void:
                     if has_job(unit, Enums.JOBS.MINER):
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.MINER)
 
-                        var job_first_tick = tick_data.now_tick == job_started_at
+                        var job_first_tick = game_data.now_tick == job_started_at
                         if job_first_tick:
                             unit.play("mine")
                             unit.stop()
 
-                        var is_done : int = tick_data.now_tick >= job_started_at + JOB_MINER_DURATION
+                        var is_done : int = game_data.now_tick >= job_started_at + JOB_MINER_DURATION
                         if is_done:
                             remove_job(unit, Enums.JOBS.MINER)
                         else:
-                            var job_tick := tick_data.now_tick - job_started_at
+                            var job_tick := game_data.now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
@@ -818,16 +845,16 @@ func tick() -> void:
                     if has_job(unit, Enums.JOBS.BUILDER):
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.BUILDER)
 
-                        var job_first_tick := tick_data.now_tick == job_started_at
+                        var job_first_tick := game_data.now_tick == job_started_at
                         if job_first_tick:
                             unit.play("build")
                             unit.stop()
 
-                        var is_done : int = tick_data.now_tick >= job_started_at + JOB_BUILDER_DURATION
+                        var is_done : int = game_data.now_tick >= job_started_at + JOB_BUILDER_DURATION
                         if is_done:
                             remove_job(unit, Enums.JOBS.BUILDER)
                         else:
-                            var job_tick := tick_data.now_tick - job_started_at
+                            var job_tick := game_data.now_tick - job_started_at
                             unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                             # Dig only on the frames where the unit is digging in animation
@@ -847,15 +874,15 @@ func tick() -> void:
                         var job_started_at := get_job_started_at(unit, Enums.JOBS.DIGGER)
 
                         unit.play("dig_vertical")
-                        var job_tick := tick_data.now_tick - job_started_at
+                        var job_tick := game_data.now_tick - job_started_at
                         unit.frame = job_tick % frames_count
 
-                        if (tick_data.now_tick - job_started_at) % JOB_DIGGER_STEP == 0:
+                        if (game_data.now_tick - job_started_at) % JOB_DIGGER_STEP == 0:
                             var rect := Rect2(unit.position.x, unit.position.y + 3, unit.width, 6)
                             debug_draw.add_rect(rect, Color.red)
                             paint_rect(int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y), Enums.PIXELS.EMPTY)
 
-                            var is_not_done : int = tick_data.now_tick < job_started_at + JOB_DIGGER_DURATION
+                            var is_not_done : int = game_data.now_tick < job_started_at + JOB_DIGGER_DURATION
                             if is_not_done:
                                 destination.y += 1
 
@@ -866,11 +893,11 @@ func tick() -> void:
 
                         var rect := Rect2(unit.position.x, unit.position.y, unit.width, unit.height)
                         debug_draw.add_rect(rect, Color.red)
-                        if tick_data.now_tick == job_started_at:
+                        if game_data.now_tick == job_started_at:
                             unit.play("block")
                             paint_rect(int(rect.position.x), int(rect.position.y), int(rect.size.x), int(rect.size.y), Enums.PIXELS.BLOCK)
                         else:
-                            var job_tick := tick_data.now_tick - job_started_at
+                            var job_tick := game_data.now_tick - job_started_at
                             unit.frame = job_tick % frames_count
 
                         continue
@@ -904,7 +931,7 @@ func tick() -> void:
                         if is_over_hole:
                             destination.x += unit.direction * 2
                             unit.state = Unit.STATES.FALLING
-                            unit.state_entered_at = tick_data.now_tick
+                            unit.state_entered_at = game_data.now_tick
                         else:
                             # Walk forward
                             unit.play("walk")
@@ -914,89 +941,87 @@ func tick() -> void:
 
                 else:
                     unit.state = Unit.STATES.FALLING
-                    unit.state_entered_at = tick_data.now_tick
+                    unit.state_entered_at = game_data.now_tick
 
             Unit.STATES.DEAD_FALL:
-                if tick_data.now_tick == unit.state_entered_at + 1:
+                if game_data.now_tick == unit.state_entered_at + 1:
                     unit.play("dead_fall")
                     play_sound(config.sound_splat)
 
-                if tick_data.now_tick == unit.state_entered_at + FALL_SPLAT_ANIM_DURATION:
+                if game_data.now_tick == unit.state_entered_at + FALL_SPLAT_ANIM_DURATION:
                     unit.status = Unit.STATUSES.DEAD
 
         unit.flip_h = unit.direction == -1
         unit.position = destination
 
-    tick_data.units_exited = 0
-    tick_data.units_dead = 0
-    for unit_index in range(0, tick_data.units_spawned):
-        var unit : Unit = tick_data.units[unit_index]
+    game_data.units_exited = 0
+    game_data.units_dead = 0
+    for unit_index in range(0, game_data.units_spawned):
+        var unit : Unit = game_data.units[unit_index]
         if unit.status == Unit.STATUSES.EXITED:
-            tick_data.units_exited += 1
+            game_data.units_exited += 1
             unit.set_text("")
         if unit.status == Unit.STATUSES.DEAD:
             remove_all_jobs(unit)
             unit.set_text("")
             unit.visible = false
-            tick_data.units_dead += 1
+            game_data.units_dead += 1
 
-    if tick_data.trigger_end_at == 0 && tick_data.units_dead + tick_data.units_exited == level_data.units_max:
-        tick_data.trigger_end_at = tick_data.now_tick + 50
+    if game_data.trigger_end_at == 0 && game_data.units_dead + game_data.units_exited == level_data.units_max:
+        game_data.trigger_end_at = game_data.now_tick + 50
 
-    if tick_data.now_tick == tick_data.trigger_end_at:
-        tick_data.is_ticking = false
+    # Update UI
+    hud.set_spawned_label("Out: %s" % game_data.units_spawned)
+    hud.set_exited_label("In: %s" % game_data.units_exited)
+    hud.set_dead_label("Dead: %s" % game_data.units_dead)
 
-        if tick_data.units_exited >= level_data.units_goal:
-            if current_level >= config.levels.size() - 1:
-                print("Game over")
-                unload_level()
-                yield(self, "level_unloaded")
+    if game_data.trigger_end_at > 0 && game_data.now_tick == game_data.trigger_end_at:
+        var goal_reached := game_data.units_exited >= level_data.units_goal
+
+        unload_level()
+        yield(self, "level_unloaded")
+
+        if goal_reached:
+            current_level += 1
+            if current_level > config.levels.size() - 1:
+                print("Last level finished")
+                current_level = 0
+                start_title()
+                return
             else:
                 print("Loading next level")
-                unload_level()
-                yield(self, "level_unloaded")
-                current_level += 1
-                if current_level > config.levels.size() - 1:
-                    current_level = 0
-                    start_title()
-                    return
+
                 load_level(config.levels[current_level])
                 yield(self, "level_loaded")
-                tick_data.is_ticking = true
+
                 start_level()
         else:
             print("Restarting current level")
-            unload_level()
-            yield(self, "level_unloaded")
+
             load_level(config.levels[current_level])
             yield(self, "level_loaded")
-            tick_data.is_ticking = true
+
             start_level()
 
-    # Update UI
-    hud.set_spawned_label("Out: %s" % tick_data.units_spawned)
-    hud.set_exited_label("In: %s" % tick_data.units_exited)
-    hud.set_dead_label("Dead: %s" % tick_data.units_dead)
-
 func spawn_unit(x: int, y: int) -> Unit:
-    if tick_data.units_spawned >= tick_data.units.size():
-        print("Max units reached (%s)" % tick_data.units.size())
+    if game_data.units_spawned >= game_data.units.size():
+        print("Max units reached (%s)" % game_data.units.size())
         return null
 
     var unit : Unit = config.unit_prefab.instance()
-    unit.name = "Unit %s" % tick_data.units_spawned
+    unit.name = "Unit %s" % game_data.units_spawned
     unit.state = Unit.STATES.FALLING
-    unit.state_entered_at = tick_data.now_tick
+    unit.state_entered_at = game_data.now_tick
     unit.position.x = x
     unit.position.y = y - unit.height / 2
     unit.speed_scale = TICK_SPEED / 50
     unit.play("fall")
 
-    tick_data.units[tick_data.units_spawned] = unit
+    game_data.units[game_data.units_spawned] = unit
     scaler_node.add_child(unit)
     unit.set_text("")
 
-    tick_data.units_spawned += 1
+    game_data.units_spawned += 1
 
     return unit
 
@@ -1015,7 +1040,7 @@ func paint_rect(origin_x: int, origin_y: int, width: int, height: int, value: in
         return
 
     for index in pixels_to_draw:
-        tick_data.map_data[index] = value
+        game_data.map_data[index] = value
 
     update_map(origin_x - width / 2, origin_y - height / 2, width, height)
 
@@ -1034,7 +1059,7 @@ func paint_circle(origin_x: int, origin_y: int, radius: int, value: int) -> void
         return
 
     for index in pixels_to_draw:
-        tick_data.map_data[index] = value
+        game_data.map_data[index] = value
 
     update_map(origin_x - radius, origin_y - radius, radius * 2, radius * 2)
 
@@ -1042,7 +1067,7 @@ func has_flag(x: int, y: int, flag: int) -> bool:
     if not is_in_bounds(x, y):
         return false
     var index := calculate_index(x, y, level_data.map_width)
-    return tick_data.map_data[index] & flag != 0
+    return game_data.map_data[index] & flag != 0
 
 func is_in_bounds(x: int, y: int) -> bool:
     return x >= 0 && x < level_data.map_width && y >= 0 && y < level_data.map_height
@@ -1063,9 +1088,9 @@ func update_map(x: int, y: int, width: int, height: int) -> void:
     for pixel_x in range(x, x + width):
         for pixel_y in range(y, y + height):
             var index := pixel_y * level_data.map_width + pixel_x
-            if index < 0 || index >= tick_data.map_data.size():
+            if index < 0 || index >= game_data.map_data.size():
                 continue
-            var pixel := tick_data.map_data[index]
+            var pixel := game_data.map_data[index]
             var pos_x := index % level_data.map_width
             var pos_y := index / level_data.map_width
 
@@ -1109,7 +1134,7 @@ func play_sound(sound: AudioStream, pitch: float = 1.0) -> void:
     audio_player_sound.play()
 
 func add_job(unit: Unit, job_id: int) -> void:
-    unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = tick_data.now_tick
+    unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = game_data.now_tick
 
 func remove_job(unit: Unit, job_id: int) -> void:
     unit.jobs_started_at[Enums.JOBS.values().find(job_id)] = 0
