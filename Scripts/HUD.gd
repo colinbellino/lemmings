@@ -49,7 +49,7 @@ func open() -> void:
 func close() -> void:
     root.modulate.a = 0.0
     yield(get_tree(), "idle_frame")
-    emit_signal("closed")
+        emit_signal("closed")
 
 func job_button_pressed(index: int) -> void:
     var job_id : int = Enums.TOOLS.values()[index + 1]

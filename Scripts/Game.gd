@@ -420,6 +420,9 @@ func load_level(level: Level) -> void:
     emit_signal("level_loaded")
 
 func unload_level() -> void:
+    var tween := create_tween()
+    tween.tween_property(audio_player_music, "volume_db", -80.0, 1.0)
+
     transitions.open()
     yield(transitions, "opened")
     hud.close()
@@ -439,8 +442,6 @@ func unload_level() -> void:
     map_sprite.texture = null
     entrance_node.queue_free()
     exit_node.queue_free()
-
-    audio_player_music.stop()
 
     game_data.is_ticking = false
 
@@ -480,6 +481,7 @@ func start_level() -> void:
     yield(get_tree().create_timer(2), "timeout")
 
     audio_player_music.stream = level.music
+    audio_player_music.volume_db = 0.0
     audio_player_music.play()
 
 func get_unit_at(x: int, y: int) -> int:
