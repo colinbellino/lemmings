@@ -579,13 +579,13 @@ func select_tool(tool_id: int) -> void:
     use_tool(tool_id, 0, 0, false)
 
 func spawn_rate_up() -> void:
-    increase_spawn_rate(10)
+    increase_spawn_rate(1)
 
 func spawn_rate_down() -> void:
-    increase_spawn_rate(-10)
+    increase_spawn_rate(-1)
 
 func increase_spawn_rate(value: int) -> void:
-    level_data.spawn_rate = int(clamp(level_data.spawn_rate + value, 10, 90))
+    level_data.spawn_rate = int(clamp(level_data.spawn_rate + value, 1, 99))
     # print("spawn_rate: ", level_data.spawn_rate)
 
 func use_job_tool(x: int, y: int, pressed: bool, tool_id: int, job_id: int) -> void:
@@ -622,7 +622,7 @@ func set_toggle_debug_visibility(value: bool) -> void:
 
 func tick() -> void:
     if level_data.spawn_is_active:
-        if game_data.now_tick % (100 - level_data.spawn_rate) == 0:
+        if game_data.now_tick % (100 - level_data.spawn_rate + 5) == 0:
             spawn_unit(int(level_data.entrance_position.x), int(level_data.entrance_position.y))
             if game_data.units_spawned >= game_data.units.size():
                 level_data.spawn_is_active = false
@@ -984,6 +984,7 @@ func tick() -> void:
     hud.set_spawned_label("Out: %s" % game_data.units_spawned)
     hud.set_exited_label("In: %s" % game_data.units_exited)
     hud.set_dead_label("Dead: %s" % game_data.units_dead)
+    hud.set_spawn_rate_label(String(level_data.spawn_rate))
 
     if game_data.trigger_end_at > 0 && game_data.now_tick == game_data.trigger_end_at:
         var goal_reached := game_data.units_exited >= level_data.units_goal

@@ -1,9 +1,15 @@
-[gd_scene load_steps=5 format=2]
+[gd_scene load_steps=7 format=2]
 
 [ext_resource path="res://Prefabs/JobButton.tscn" type="PackedScene" id=1]
+[ext_resource path="res://Fonts/Silver.ttf" type="DynamicFontData" id=2]
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=3]
 [ext_resource path="res://Scripts/HUD.gd" type="Script" id=4]
 [ext_resource path="res://Art/tools.png" type="Texture" id=5]
+
+[sub_resource type="DynamicFont" id=1]
+size = 44
+extra_spacing_bottom = -10
+font_data = ExtResource( 2 )
 
 [node name="HUD" type="CanvasLayer"]
 unique_name_in_owner = true
@@ -86,10 +92,10 @@ margin_bottom = 96.0
 size_flags_horizontal = 3
 
 [node name="Control" type="Control" parent="Root"]
-margin_left = -173.0
-margin_top = -3.0
-margin_right = -133.0
-margin_bottom = 37.0
+margin_left = -236.0
+margin_top = -4.0
+margin_right = -196.0
+margin_bottom = 36.0
 
 [node name="UnitsSpawnedLabel" type="Label" parent="Root/Control"]
 unique_name_in_owner = true
@@ -143,36 +149,60 @@ texture = ExtResource( 5 )
 region_enabled = true
 region_rect = Rect2( 144, 0, 16, 48 )
 
-[node name="SpawnRateUpButton" type="Button" parent="Root"]
+[node name="SpawnRate" type="Button" parent="Root"]
 unique_name_in_owner = true
-anchor_left = 1.0
-anchor_top = 0.5
-anchor_right = 1.0
-anchor_bottom = 0.5
-margin_left = -176.0
-margin_top = -48.0
-margin_right = -96.0
-margin_bottom = -2.0
-size_flags_horizontal = 0
-size_flags_vertical = 0
-size_flags_stretch_ratio = 0.0
-custom_fonts/font = ExtResource( 3 )
-text = "▲"
+margin_left = 1684.0
+margin_top = 12.0
+margin_right = 1824.0
+margin_bottom = 108.0
+size_flags_horizontal = 3
 icon_align = 1
 
-[node name="SpawnRateDownButton" type="Button" parent="Root"]
+[node name="SpawnRateUpButton" type="Button" parent="Root/SpawnRate"]
 unique_name_in_owner = true
 anchor_left = 1.0
 anchor_top = 0.5
 anchor_right = 1.0
 anchor_bottom = 0.5
-margin_left = -176.0
-margin_top = 2.0
-margin_right = -96.0
-margin_bottom = 48.0
+margin_left = -136.0
+margin_top = -44.0
+margin_right = -76.0
+margin_bottom = 1.0
 size_flags_horizontal = 0
 size_flags_vertical = 0
 size_flags_stretch_ratio = 0.0
-custom_fonts/font = ExtResource( 3 )
-text = "▼"
+custom_fonts/font = SubResource( 1 )
+text = "+"
+flat = true
 icon_align = 1
+
+[node name="SpawnRateDownButton" type="Button" parent="Root/SpawnRate"]
+unique_name_in_owner = true
+anchor_left = 1.0
+anchor_top = 0.5
+anchor_right = 1.0
+anchor_bottom = 0.5
+margin_left = -136.0
+margin_top = -1.0
+margin_right = -76.0
+margin_bottom = 44.0
+size_flags_horizontal = 0
+size_flags_vertical = 0
+size_flags_stretch_ratio = 0.0
+custom_fonts/font = SubResource( 1 )
+text = "-"
+flat = true
+icon_align = 1
+
+[node name="SpawnRateLabel" type="Label" parent="Root/SpawnRate"]
+unique_name_in_owner = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+margin_left = 54.0
+margin_top = 20.0
+margin_right = -44.0
+margin_bottom = -44.0
+rect_scale = Vector2( 2, 2 )
+custom_fonts/font = ExtResource( 3 )
+text = "99"
+align = 1
