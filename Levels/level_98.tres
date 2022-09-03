@@ -1,17 +1,15 @@
-[gd_resource type="Resource" load_steps=6 format=2]
+[gd_resource type="Resource" load_steps=5 format=2]
 
 [ext_resource path="res://Scripts/Level.gd" type="Script" id=1]
 [ext_resource path="res://Audio/Musics/11 Builders Will Help You Here.mp3" type="AudioStream" id=2]
 [ext_resource path="res://Art/Levels/map_98.png" type="Texture" id=3]
-[ext_resource path="res://Prefabs/Exit_00.tscn" type="PackedScene" id=4]
-[ext_resource path="res://Prefabs/Entrance_00.tscn" type="PackedScene" id=5]
+[ext_resource path="res://Levels/type_dirt.tres" type="Resource" id=4]
 
 [resource]
 script = ExtResource( 1 )
 texture = ExtResource( 3 )
 music = ExtResource( 2 )
-entrance = ExtResource( 5 )
-exit = ExtResource( 4 )
+type = ExtResource( 4 )
 camera_x = 0
 camera_y = 0
 units_max = 5

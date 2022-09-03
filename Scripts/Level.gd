@@ -3,8 +3,7 @@ extends Resource
 
 export var texture : Texture
 export var music : AudioStream
-export var entrance: PackedScene = load("res://Prefabs/Exit_00.tscn")
-export var exit : PackedScene = load("res://Prefabs/Entrance_00.tscn")
+export var type : Resource
 export var camera_x : int
 export var camera_y : int
 export(int, 1, 100, 1) var units_max : int = 10
@@ -18,4 +17,3 @@ export var job_builder : int
 export var job_basher : int
 export var job_miner : int
 export var job_digger : int
-export var color : Color = Color.blue

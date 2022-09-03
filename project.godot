@@ -44,6 +44,11 @@ _global_script_classes=[ {
 "language": "GDScript",
 "path": "res://Scripts/Level.gd"
 }, {
+"base": "Resource",
+"class": "LevelType",
+"language": "GDScript",
+"path": "res://Scripts/LevelType.gd"
+}, {
 "base": "CanvasLayer",
 "class": "Title",
 "language": "GDScript",
@@ -67,6 +72,7 @@ _global_script_class_icons={
 "HUD": "",
 "JobButton": "",
 "Level": "",
+"LevelType": "",
 "Title": "",
 "Transitions": "",
 "Unit": ""

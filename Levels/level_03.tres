@@ -1,17 +1,15 @@
-[gd_resource type="Resource" load_steps=6 format=2]
+[gd_resource type="Resource" load_steps=5 format=2]
 
 [ext_resource path="res://Scripts/Level.gd" type="Script" id=1]
 [ext_resource path="res://Art/Levels/map_03.png" type="Texture" id=2]
 [ext_resource path="res://Audio/Musics/08 Now Use Miners and Climbers.mp3" type="AudioStream" id=3]
-[ext_resource path="res://Prefabs/Exit_03.tscn" type="PackedScene" id=4]
-[ext_resource path="res://Prefabs/Entrance_00.tscn" type="PackedScene" id=5]
+[ext_resource path="res://Levels/type_brick.tres" type="Resource" id=4]
 
 [resource]
 script = ExtResource( 1 )
 texture = ExtResource( 2 )
 music = ExtResource( 3 )
-entrance = ExtResource( 5 )
-exit = ExtResource( 4 )
+type = ExtResource( 4 )
 camera_x = 120
 camera_y = 0
 units_max = 10
@@ -25,4 +23,3 @@ job_builder = 0
 job_basher = 0
 job_miner = 1
 job_digger = 0
-color = Color( 0.564706, 0.12549, 0.12549, 1 )

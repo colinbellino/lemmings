@@ -328,13 +328,14 @@ func _unhandled_input(event) -> void:
             use_tool(tool_tertiary, int(map_position.x), int(map_position.y), event.pressed)
 
 func load_level(level: Level) -> void:
+    var level_type : LevelType = level.type
     # Initialize level data
     map_image = level.texture.get_data()
     level_data = LevelData.new()
     level_data.units_max = level.units_max
     level_data.units_goal = level.units_goal
     level_data.spawn_rate = level.spawn_rate
-    level_data.color = level.color
+    level_data.color = level_type.color
     increase_spawn_rate(0) # Just to make sure it's clamped to a valid value
     level_data.jobs_count = {}
     level_data.jobs_count[Enums.JOBS.CLIMBER] = level.job_climber
@@ -404,10 +405,10 @@ func load_level(level: Level) -> void:
         printerr("Could not find exit position.")
         quit_game()
         return
-    entrance_node = level.entrance.instance()
+    entrance_node = level_type.entrance.instance()
     entrance_node.position = level_data.entrance_position
     map_sprite.add_child(entrance_node)
-    exit_node = level.exit.instance()
+    exit_node = level_type.exit.instance()
     exit_node.position = level_data.exit_position + Vector2(0, 1)
     map_sprite.add_child(exit_node)
 
