@@ -20,3 +20,4 @@ export var sound_assign_job : AudioStreamSample
 export var sound_explode : AudioStreamSample
 export var sound_deathrattle : AudioStreamSample
 export var dust_particle_prefab : PackedScene
+export var music_title : AudioStream

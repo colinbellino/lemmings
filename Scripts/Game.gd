@@ -279,7 +279,11 @@ func _process(delta: float) -> void:
 
 func start_title() -> void:
     print("Opening title screen")
-    transitions.close()
+    audio_player_music.stream = config.music_title
+    audio_player_music.volume_db = 0.0
+    audio_player_music.play()
+
+    transitions.close(0.0)
     yield(transitions, "closed")
 
     title.open()
@@ -291,6 +295,9 @@ func start_title() -> void:
 func start_game() -> void:
     game_data = GameData.new()
     game_data.now = OS.get_ticks_msec()
+
+    var tween := create_tween()
+    tween.tween_property(audio_player_music, "volume_db", -80.0, 1.0)
 
     game_scale = GAME_SCALE
     scaler_node.scale = Vector2(game_scale, game_scale)

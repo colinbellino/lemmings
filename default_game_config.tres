@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=24 format=2]
+[gd_resource type="Resource" load_steps=25 format=2]
 
 [ext_resource path="res://Scripts/GameConfig.gd" type="Script" id=1]
 [ext_resource path="res://Levels/level_00.tres" type="Resource" id=2]
@@ -18,6 +18,7 @@
 [ext_resource path="res://Audio/Sounds/LETSGO.WAV" type="AudioStream" id=16]
 [ext_resource path="res://Audio/Sounds/OHNO.WAV" type="AudioStream" id=17]
 [ext_resource path="res://Audio/Sounds/DOOR.WAV" type="AudioStream" id=18]
+[ext_resource path="res://Audio/Musics/01 Title Screen.mp3" type="AudioStream" id=19]
 [ext_resource path="res://Levels/level_04.tres" type="Resource" id=20]
 [ext_resource path="res://Prefabs/ExplosionDust.tscn" type="PackedScene" id=21]
 [ext_resource path="res://Levels/level_03.tres" type="Resource" id=22]
@@ -45,3 +46,4 @@ sound_assign_job = ExtResource( 15 )
 sound_explode = ExtResource( 8 )
 sound_deathrattle = ExtResource( 17 )
 dust_particle_prefab = ExtResource( 21 )
+music_title = ExtResource( 19 )
