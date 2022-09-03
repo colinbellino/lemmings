@@ -98,6 +98,8 @@ func _ready() -> void:
     game_data = GameData.new()
     config = ResourceLoader.load("res://default_game_config.tres")
 
+    game_scale = GAME_SCALE
+
     # Init UI
     action0_button.connect("pressed", self, "select_tool", [Enums.TOOLS.PAINT_RECT])
     action1_button.connect("pressed", self, "select_tool", [Enums.TOOLS.ERASE_RECT])
@@ -279,6 +281,8 @@ func _process(delta: float) -> void:
 
 func start_title() -> void:
     print("Opening title screen")
+    set_cursor(CURSOR_DEFAULT)
+
     audio_player_music.stream = config.music_title
     audio_player_music.volume_db = 0.0
     audio_player_music.play()
@@ -507,22 +511,22 @@ func is_inside_rect(point: Vector2, rect: Rect2) -> bool:
         && (point.y >= rect.position.y && point.y <= rect.position.y + rect.size.y)
 
 func set_cursor(cursor_id: int) -> void:
-    var cursor : Texture
+    var cursor_texture : Texture
     match cursor_id:
         CURSOR_DEFAULT:
-            cursor = config.cursor_default_x1
+            cursor_texture = config.cursor_default_x1
             if game_scale >= 2:
-                cursor = config.cursor_default_x2
+                cursor_texture = config.cursor_default_x2
             if game_scale >= 4:
-                cursor = config.cursor_default_x4
+                cursor_texture = config.cursor_default_x4
         CURSOR_BORDER:
-            cursor = config.cursor_border_x1
+            cursor_texture = config.cursor_border_x1
             if game_scale >= 2:
-                cursor = config.cursor_border_x2
+                cursor_texture = config.cursor_border_x2
             if game_scale >= 4:
-                cursor = config.cursor_border_x4
+                cursor_texture = config.cursor_border_x4
 
-    Input.set_custom_mouse_cursor(cursor, Input.CURSOR_ARROW, Vector2(cursor.get_size() / 2))
+    Input.set_custom_mouse_cursor(cursor_texture, Input.CURSOR_ARROW, Vector2(cursor_texture.get_size() / 2))
 
 func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
     match tool_id:
