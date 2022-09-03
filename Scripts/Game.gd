@@ -267,17 +267,16 @@ func _process(delta: float) -> void:
             game_data.next_tick_at = game_data.now + TICK_SPEED / Engine.time_scale
 
     else:
-        if OS.is_debug_build():
-            if Input.is_action_just_released("ui_left"):
-                # game_data.now_tick -= 1
-                # tick()
-                # print("Previous tick: ", game_data.now_tick)
-                pass
-            if Input.is_action_just_released("ui_right"):
-                print("Next tick: ", game_data.now_tick)
-                tick()
-                debug_draw.update()
-                game_data.now_tick += 1
+        if Input.is_action_just_released("ui_left"):
+            # game_data.now_tick -= 1
+            # tick()
+            # print("Previous tick: ", game_data.now_tick)
+            pass
+        if Input.is_action_just_released("ui_right"):
+            print("Next tick: ", game_data.now_tick)
+            tick()
+            debug_draw.update()
+            game_data.now_tick += 1
 
 func start_title() -> void:
     print("Opening title screen")
@@ -648,15 +647,14 @@ func tick() -> void:
     for unit_index in range(0, game_data.units_spawned):
         var unit : Unit = game_data.units[unit_index]
 
-        if OS.is_debug_build():
-            var jobs_str := ""
-            for job_index in range(0, Enums.JOBS.size()):
-                var job_id : int = Enums.JOBS.values()[job_index]
-                if has_job(unit, job_id):
-                    jobs_str += "%s " % Enums.JOBS.keys()[job_index]
+        var jobs_str := ""
+        for job_index in range(0, Enums.JOBS.size()):
+            var job_id : int = Enums.JOBS.values()[job_index]
+            if has_job(unit, job_id):
+                jobs_str += "%s " % Enums.JOBS.keys()[job_index]
 
-            debug_draw.add_text(unit.position + Vector2(-5, -10), Unit.STATES.keys()[unit.state])
-            debug_draw.add_text(unit.position + Vector2(-5, -7), jobs_str)
+        debug_draw.add_text(unit.position + Vector2(-5, -10), Unit.STATES.keys()[unit.state])
+        debug_draw.add_text(unit.position + Vector2(-5, -7), jobs_str)
 
         if unit.status != Unit.STATUSES.ACTIVE:
             continue
