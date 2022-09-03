@@ -1,4 +1,4 @@
-[gd_scene load_steps=189 format=2]
+[gd_scene load_steps=197 format=2]
 
 [ext_resource path="res://Fonts/Silver.tres" type="DynamicFont" id=1]
 [ext_resource path="res://Scripts/Unit.gd" type="Script" id=2]
@@ -135,6 +135,38 @@ region = Rect2( 240, 272, 16, 16 )
 [sub_resource type="AtlasTexture" id=204]
 atlas = ExtResource( 3 )
 region = Rect2( 0, 272, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=207]
+atlas = ExtResource( 3 )
+region = Rect2( 0, 288, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=208]
+atlas = ExtResource( 3 )
+region = Rect2( 16, 288, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=209]
+atlas = ExtResource( 3 )
+region = Rect2( 32, 288, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=210]
+atlas = ExtResource( 3 )
+region = Rect2( 48, 288, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=211]
+atlas = ExtResource( 3 )
+region = Rect2( 64, 288, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=212]
+atlas = ExtResource( 3 )
+region = Rect2( 80, 288, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=213]
+atlas = ExtResource( 3 )
+region = Rect2( 96, 288, 16, 16 )
+
+[sub_resource type="AtlasTexture" id=214]
+atlas = ExtResource( 3 )
+region = Rect2( 112, 288, 16, 16 )
 
 [sub_resource type="AtlasTexture" id=39]
 atlas = ExtResource( 3 )
@@ -752,6 +784,11 @@ animations = [ {
 "name": "build",
 "speed": 10.0
 }, {
+"frames": [ SubResource( 207 ), SubResource( 208 ), SubResource( 209 ), SubResource( 210 ), SubResource( 211 ), SubResource( 212 ), SubResource( 213 ), SubResource( 214 ) ],
+"loop": false,
+"name": "build_end",
+"speed": 10.0
+}, {
 "frames": [ SubResource( 39 ), SubResource( 40 ), SubResource( 41 ), SubResource( 42 ), SubResource( 43 ), SubResource( 44 ), SubResource( 45 ), SubResource( 46 ) ],
 "loop": true,
 "name": "climb",
@@ -811,8 +848,7 @@ animations = [ {
 [node name="Unit" type="AnimatedSprite"]
 z_index = 1
 frames = SubResource( 10 )
-animation = "float"
-frame = 4
+animation = "build_end"
 offset = Vector2( 0, -2 )
 script = ExtResource( 2 )
 

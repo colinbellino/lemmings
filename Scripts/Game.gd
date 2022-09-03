@@ -13,7 +13,7 @@ const JOB_BLOCKER_ANIM_DURATION : int = 0
 const JOB_BUILDER_DURATION : int = 200
 const JOB_BUILDER_STEP : int = 10
 const JOB_BUILDER_DESTROY_RADIUS : int = 5
-const JOB_BUILDER_ANIM_DURATION : int = 0
+const JOB_BUILDER_ANIM_DURATION : int = 8
 const JOB_BASHER_DURATION : int = 300
 const JOB_BASHER_STEP : int = 10
 const JOB_BASHER_ANIM_DURATION : int = 0
@@ -869,23 +869,29 @@ func tick() -> void:
                             remove_job(unit, Enums.JOBS.BUILDER)
                             continue
 
-                        var is_done : int = game_data.now_tick >= job_started_at + JOB_BUILDER_DURATION
-                        if is_done:
+                        var job_tick := game_data.now_tick - job_started_at
+                        unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
+
+                        var is_end_animation_done := game_data.now_tick >= job_started_at + JOB_BUILDER_DURATION + JOB_BUILDER_ANIM_DURATION
+                        if is_end_animation_done:
                             remove_job(unit, Enums.JOBS.BUILDER)
-                        else:
-                            var job_tick := game_data.now_tick - job_started_at
-                            unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
+                            continue
 
-                            # Dig only on the frames where the unit is digging in animation
-                            if (unit.frame == 9):
-                                var pos_x := int(unit.position.x + 4 * unit.direction)
-                                var pos_y := int(unit.position.y + unit.height / 2 - 1)
-                                paint_rect(pos_x, pos_y, 4, 1, Enums.PIXELS.BLOCK | Enums.PIXELS.PAINT)
+                        var is_done_building : int = game_data.now_tick >= job_started_at + JOB_BUILDER_DURATION
+                        if is_done_building:
+                            unit.play("build_end")
+                            continue
 
-                            # Move only on the frames where the unit moves forward in animation
-                            if (unit.frame == 16):
-                                destination.x += 2 * unit.direction
-                                destination.y -= 1
+                        # Dig only on the frames where the unit is digging in animation
+                        if (unit.frame == 9):
+                            var pos_x := int(unit.position.x + 4 * unit.direction)
+                            var pos_y := int(unit.position.y + unit.height / 2 - 1)
+                            paint_rect(pos_x, pos_y, 4, 1, Enums.PIXELS.BLOCK | Enums.PIXELS.PAINT)
+
+                        # Move only on the frames where the unit moves forward in animation
+                        if (unit.frame == 16):
+                            destination.x += 2 * unit.direction
+                            destination.y -= 1
 
                         continue
 
