@@ -19,5 +19,6 @@ export var sound_splat : AudioStreamSample
 export var sound_assign_job : AudioStreamSample
 export var sound_explode : AudioStreamSample
 export var sound_deathrattle : AudioStreamSample
-export var dust_particle_prefab : PackedScene
+export var sound_last_brick : AudioStreamSample
 export var music_title : AudioStream
+export var dust_particle_prefab : PackedScene

@@ -10,7 +10,7 @@ const JOB_FLOATER_FLOATER_DELAY : int = 7
 const JOB_BOMBER_DURATION : int = 100
 const JOB_BOMBER_STEP : int = 20
 const JOB_BLOCKER_ANIM_DURATION : int = 0
-const JOB_BUILDER_DURATION : int = 200
+const JOB_BUILDER_DURATION : int = 204
 const JOB_BUILDER_STEP : int = 10
 const JOB_BUILDER_DESTROY_RADIUS : int = 5
 const JOB_BUILDER_ANIM_DURATION : int = 8
@@ -870,28 +870,33 @@ func tick() -> void:
                             continue
 
                         var job_tick := game_data.now_tick - job_started_at
-                        unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
+
+                        if (job_tick == JOB_BUILDER_DURATION - 8 || job_tick == JOB_BUILDER_DURATION - 25 || job_tick == JOB_BUILDER_DURATION - 42):
+                            play_sound(config.sound_last_brick)
 
                         var is_end_animation_done := game_data.now_tick >= job_started_at + JOB_BUILDER_DURATION + JOB_BUILDER_ANIM_DURATION
                         if is_end_animation_done:
                             remove_job(unit, Enums.JOBS.BUILDER)
                             continue
 
-                        var is_done_building : int = game_data.now_tick >= job_started_at + JOB_BUILDER_DURATION
+                        var is_done_building : int = job_tick >= JOB_BUILDER_DURATION
                         if is_done_building:
                             unit.play("build_end")
+                            unit.frame = (job_tick + JOB_BUILDER_DURATION) % unit.frames.get_frame_count(unit.animation)
                             continue
 
-                        # Dig only on the frames where the unit is digging in animation
+                        # Build only on the frames where the unit is digging in animation
                         if (unit.frame == 9):
                             var pos_x := int(unit.position.x + 4 * unit.direction)
                             var pos_y := int(unit.position.y + unit.height / 2 - 1)
                             paint_rect(pos_x, pos_y, 4, 1, Enums.PIXELS.BLOCK | Enums.PIXELS.PAINT)
 
                         # Move only on the frames where the unit moves forward in animation
-                        if (unit.frame == 16):
+                        if (unit.frame == 15):
                             destination.x += 2 * unit.direction
                             destination.y -= 1
+
+                        unit.frame = job_tick % unit.frames.get_frame_count(unit.animation)
 
                         continue
 

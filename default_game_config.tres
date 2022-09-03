@@ -1,4 +1,4 @@
-[gd_resource type="Resource" load_steps=25 format=2]
+[gd_resource type="Resource" load_steps=26 format=2]
 
 [ext_resource path="res://Scripts/GameConfig.gd" type="Script" id=1]
 [ext_resource path="res://Levels/level_00.tres" type="Resource" id=2]
@@ -24,6 +24,7 @@
 [ext_resource path="res://Levels/level_03.tres" type="Resource" id=22]
 [ext_resource path="res://Levels/level_05.tres" type="Resource" id=23]
 [ext_resource path="res://Levels/level_06.tres" type="Resource" id=24]
+[ext_resource path="res://Audio/Sounds/TING.WAV" type="AudioStream" id=25]
 
 [resource]
 script = ExtResource( 1 )
@@ -45,5 +46,6 @@ sound_splat = ExtResource( 14 )
 sound_assign_job = ExtResource( 15 )
 sound_explode = ExtResource( 8 )
 sound_deathrattle = ExtResource( 17 )
-dust_particle_prefab = ExtResource( 21 )
+sound_last_brick = ExtResource( 25 )
 music_title = ExtResource( 19 )
+dust_particle_prefab = ExtResource( 21 )
