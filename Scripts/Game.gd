@@ -283,6 +283,8 @@ func start_title() -> void:
     print("Opening title screen")
     set_cursor(CURSOR_DEFAULT)
 
+    VisualServer.set_default_clear_color(config.clear_color_title)
+
     audio_player_music.stream = config.music_title
     audio_player_music.volume_db = 0.0
     audio_player_music.play()
@@ -464,6 +466,9 @@ func start_level() -> void:
     game_data.is_ticking = true
 
     var level : Level = config.levels[current_level]
+    var level_type : LevelType = level.type
+
+    VisualServer.set_default_clear_color(level_type.clear_color)
 
     camera.position.x = level.camera_x
     camera.position.y = level.camera_y

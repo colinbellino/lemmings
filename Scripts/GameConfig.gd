@@ -2,6 +2,7 @@ extends Resource
 class_name GameConfig
 
 export(Array, Resource) var levels : Array
+export var clear_color_title : Color
 export var cursor_default_x1 : Texture
 export var cursor_default_x2 : Texture
 export var cursor_default_x4 : Texture
