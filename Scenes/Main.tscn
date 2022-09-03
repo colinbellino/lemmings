@@ -193,4 +193,3 @@ bus = "Music"
 
 [node name="SoundAudioPlayer" type="AudioStreamPlayer" parent="."]
 unique_name_in_owner = true
-bus = "Sounds"

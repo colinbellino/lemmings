@@ -78,6 +78,8 @@ onready var action2_button : Button = get_node("%Action2")
 onready var audio_player_sound : AudioStreamPlayer = get_node("%SoundAudioPlayer")
 onready var audio_player_music : AudioStreamPlayer = get_node("%MusicAudioPlayer")
 onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
+onready var audio_bus_music : int = AudioServer.get_bus_index("Music")
+onready var audio_bus_sound : int = AudioServer.get_bus_index("Sound")
 var map_image : Image
 var collision_image : Image
 var entrance_node : AnimatedSprite
@@ -111,7 +113,7 @@ func _ready() -> void:
     set_toggle_debug_visibility(false)
 
     if OS.is_debug_build():
-        AudioServer.set_bus_mute(audio_bus_master, true)
+        AudioServer.set_bus_mute(audio_bus_music, true)
         start_game()
         return
 
@@ -257,8 +259,6 @@ func _process(delta: float) -> void:
             "Scale": game_scale,
             "Units": "%s / %s" % [game_data.units_spawned, game_data.units.size()],
             "Spawn rate": level_data.spawn_rate,
-            "Goal": "%s / %s" % [game_data.units_exited, level_data.units_goal],
-            "Jobs": level_data.jobs_count,
         }, "  "))
 
         if game_data.now >= game_data.next_tick_at:
@@ -365,7 +365,7 @@ func load_level(level: Level) -> void:
         var job_id : int = keys[job_index]
         var count : int = level_data.jobs_count[job_id]
         if count > 0 && first_selected == false:
-            select_tool(job_index + 1)
+            select_tool(job_index + 1, false)
             first_selected = true
 
     var units := []
@@ -583,11 +583,13 @@ func use_tool(tool_id: int, x: int, y: int, pressed: bool) -> void:
 
     # print("Used tool: %s at (%s,%s)" % [Enums.TOOLS.keys()[tool_id], x, y])
 
-func select_tool(tool_id: int) -> void:
+func select_tool(tool_id: int, play_sound: bool = true) -> void:
     # print("Tool selected: ", Enums.TOOLS.keys()[tool_id])
     if tool_id < Enums.JOBS.size():
         tool_primary = tool_id
         hud.select_job(tool_id)
+        if play_sound:
+            play_sound(config.sound_assign_job)
         return
 
     if tool_id == Enums.TOOLS.SPAWN_UNIT:
@@ -596,9 +598,11 @@ func select_tool(tool_id: int) -> void:
     use_tool(tool_id, 0, 0, false)
 
 func spawn_rate_up() -> void:
+    play_sound(config.sound_assign_job)
     increase_spawn_rate(1)
 
 func spawn_rate_down() -> void:
+    play_sound(config.sound_assign_job)
     increase_spawn_rate(-1)
 
 func increase_spawn_rate(value: int) -> void:
