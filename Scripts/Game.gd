@@ -148,8 +148,8 @@ func _process(delta: float) -> void:
         return
 
     if Input.is_action_just_released("debug_4"):
-        print("[DEBUG] Toggling audio mute")
-        AudioServer.set_bus_mute(audio_bus_master, !AudioServer.is_bus_mute(audio_bus_master))
+        print("[DEBUG] Toggling music")
+        AudioServer.set_bus_mute(audio_bus_music, !AudioServer.is_bus_mute(audio_bus_music))
         return
 
     if Input.is_action_just_released("debug_5"):
