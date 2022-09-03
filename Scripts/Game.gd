@@ -81,7 +81,7 @@ onready var audio_bus_master : int = AudioServer.get_bus_index("Master")
 var map_image : Image
 var collision_image : Image
 var entrance_node : AnimatedSprite
-var exit_node : AnimatedSprite
+var exit_node : Node2D
 
 # Game data
 var current_level : int
@@ -117,6 +117,20 @@ func _ready() -> void:
 
 func _process(delta: float) -> void:
     game_data.now += delta * 1000 # Delta is in seconds, now in Milliseconds
+
+    for i in range(1, 12):
+        if Input.is_key_pressed(KEY_SHIFT) && Input.is_action_just_released("debug_%s" % i):
+            current_level = i - 1
+            print("[DEBUG] Loading level: %s" % [current_level])
+
+            unload_level()
+            yield(self, "level_unloaded")
+
+            load_level(config.levels[current_level])
+            yield(self, "level_loaded")
+            start_level()
+
+            return
 
     if Input.is_action_just_released("debug_1"):
         print("[DEBUG] Toggling debug mode")
@@ -204,19 +218,6 @@ func _process(delta: float) -> void:
     #     scaler_node.scale = Vector2(game_scale, game_scale)
     #     debug_draw.update()
     #     return
-
-    for i in range(1, 12):
-        if Input.is_key_pressed(KEY_SHIFT) && Input.is_action_just_released("debug_%s" % i):
-            current_level = i - 1
-            print("[DEBUG] Loading level: %s" % [current_level])
-
-            unload_level()
-            yield(self, "level_unloaded")
-
-            load_level(config.levels[current_level])
-            yield(self, "level_loaded")
-            start_level()
-
 
     # Update cursor
     var mouse_map_position := get_mouse_position()
@@ -407,7 +408,7 @@ func load_level(level: Level) -> void:
     entrance_node.position = level_data.entrance_position
     map_sprite.add_child(entrance_node)
     exit_node = level.exit.instance()
-    exit_node.position = level_data.exit_position
+    exit_node.position = level_data.exit_position + Vector2(0, 1)
     map_sprite.add_child(exit_node)
 
     update_map(0, 0, level_data.map_width, level_data.map_height)
