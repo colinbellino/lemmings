@@ -926,6 +926,7 @@ func tick() -> void:
                     var destination_offset_y := 0
                     var hit_wall := false
 
+                    # Step up
                     for offset_y in range(0, -unit.climb_step, -1):
                         var wall_check_pos_y_with_offset := wall_check_pos_y + offset_y
                         debug_draw.add_rect(Rect2(wall_check_pos_x, wall_check_pos_y_with_offset, 1, 1), Color.magenta)
@@ -939,7 +940,8 @@ func tick() -> void:
                         # Turn around
                         unit.direction *= -1
                     else:
-                        for offset_y in range(1, unit.climb_step):
+                        # Step down
+                        for offset_y in range(0, unit.climb_step):
                             var step_down_pos_y_with_offset := wall_check_pos_y + offset_y
                             debug_draw.add_rect(Rect2(wall_check_pos_x, step_down_pos_y_with_offset, 1, 1), Color.teal)
                             if has_flag(wall_check_pos_x, step_down_pos_y_with_offset, Enums.PIXELS.BLOCK):
