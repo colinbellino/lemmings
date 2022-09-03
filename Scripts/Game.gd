@@ -1124,6 +1124,9 @@ func is_in_bounds(x: int, y: int) -> bool:
     return x >= 0 && x < level_data.map_width && y >= 0 && y < level_data.map_height
 
 func quit_game() -> void:
+    title.hide()
+    unload_level()
+    yield(self, "level_unloaded")
     print("Quitting game...")
     get_tree().quit()
 
