@@ -2,7 +2,7 @@
 
 [ext_resource path="res://Scripts/Level.gd" type="Script" id=1]
 [ext_resource path="res://Art/Levels/map_02.png" type="Texture" id=2]
-[ext_resource path="res://Audio/Musics/06 Only Floaters Can Survive This.mp3" type="AudioStream" id=3]
+[ext_resource path="res://Audio/Musics/07 Tailor-Made For Blockers.mp3" type="AudioStream" id=3]
 [ext_resource path="res://Levels/type_pyramid.tres" type="Resource" id=4]
 
 [resource]

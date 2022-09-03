@@ -2,13 +2,13 @@
 
 [ext_resource path="res://Scripts/Level.gd" type="Script" id=1]
 [ext_resource path="res://Levels/type_hell.tres" type="Resource" id=2]
-[ext_resource path="res://Audio/Musics/09 You Need Bashers This Time.mp3" type="AudioStream" id=4]
+[ext_resource path="res://Audio/Musics/10 A Task For Blockers and Bombers.mp3" type="AudioStream" id=3]
 [ext_resource path="res://Art/Levels/map_05.png" type="Texture" id=5]
 
 [resource]
 script = ExtResource( 1 )
 texture = ExtResource( 5 )
-music = ExtResource( 4 )
+music = ExtResource( 3 )
 type = ExtResource( 2 )
 camera_x = 180
 camera_y = 0
