@@ -235,9 +235,9 @@ func _process(delta: float) -> void:
             increase_spawn_rate(-10)
         if Input.is_action_just_released("ui_up"):
             increase_spawn_rate(10)
-        if Input.is_action_just_released("ui_left"):
+        if Input.is_action_just_released("scroll_left"):
             camera.position.x = clamp(camera.position.x - 10, 0, level_data.map_width - camera.get_viewport().size.x / game_scale)
-        if Input.is_action_just_released("ui_right"):
+        if Input.is_action_just_released("scroll_right"):
             camera.position.x = clamp(camera.position.x + 10, 0, level_data.map_width - camera.get_viewport().size.x / game_scale)
 
         if Input.is_key_pressed(KEY_SHIFT):
