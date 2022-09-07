@@ -1,6 +1,10 @@
+![banner](https://img.itch.zone/aW1nLzk5NTY1NTkucG5n/original/xdSXGc.png)
+
 # Lemmings
 
-TODO:
+This is a clone of the game of the same name (SNES version) made in Godot to learn how to use the engine. Only the first 7 levels are done, but everything should be working as intended or close enough.
+
+**The game is available here: https://colinbellino.itch.io/lemmings**
 
 ## Build app icon
 
